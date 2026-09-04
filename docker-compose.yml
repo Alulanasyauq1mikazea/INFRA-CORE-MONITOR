@@ -1,0 +1,77 @@
+version: '3.8'
+
+services:
+  sentinelpulse:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: sentinelpulse:latest
+    container_name: sentinelpulse_dashboard
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - HOST=0.0.0.0
+      - CORS_ORIGIN=*
+      - DEMO_FALLBACK_ENABLED=true
+      - POLL_INTERVAL_MS=4000
+      - SQLITE_PATH=/app/data/sentinel.sqlite
+      - DATA_RETAIN_DAYS=7
+      
+      # 1. Prometheus Configuration
+      - PROMETHEUS_ENABLED=true
+      - PROMETHEUS_ENDPOINT=${PROMETHEUS_ENDPOINT:-http://192.168.1.100:9090}
+      - PROMETHEUS_USERNAME=${PROMETHEUS_USERNAME:-}
+      - PROMETHEUS_PASSWORD=${PROMETHEUS_PASSWORD:-}
+      - PROMETHEUS_BEARER_TOKEN=${PROMETHEUS_BEARER_TOKEN:-}
+      - PROMETHEUS_TIMEOUT_MS=5000
+
+      # 2. MikroTik RouterOS Configuration
+      - MIKROTIK_ENABLED=true
+      - MIKROTIK_HOST=${MIKROTIK_HOST:-https://192.168.1.1}
+      - MIKROTIK_PORT=443
+      - MIKROTIK_PROTOCOL=rest
+      - MIKROTIK_USERNAME=${MIKROTIK_USERNAME:-admin}
+      - MIKROTIK_PASSWORD=${MIKROTIK_PASSWORD:-}
+      - MIKROTIK_INSECURE_TLS=true
+      - MIKROTIK_TIMEOUT_MS=5000
+
+      # 3. CrowdSec Configuration
+      - CROWDSEC_ENABLED=true
+      - CROWDSEC_EXPORTER_ENDPOINT=${CROWDSEC_EXPORTER_ENDPOINT:-http://192.168.1.105:6060/metrics}
+      - CROWDSEC_LAPI_ENDPOINT=${CROWDSEC_LAPI_ENDPOINT:-http://192.168.1.105:8080}
+      - CROWDSEC_API_KEY=${CROWDSEC_API_KEY:-}
+      - CROWDSEC_TIMEOUT_MS=5000
+
+      # 4. Uptime Kuma Configuration
+      - UPTIME_KUMA_ENABLED=true
+      - UPTIME_KUMA_ENDPOINT=${UPTIME_KUMA_ENDPOINT:-http://192.168.1.110:3001}
+      - UPTIME_KUMA_SLUG=${UPTIME_KUMA_SLUG:-default}
+      - UPTIME_KUMA_METRICS_ENDPOINT=${UPTIME_KUMA_METRICS_ENDPOINT:-http://192.168.1.110:3001/metrics}
+      - UPTIME_KUMA_TIMEOUT_MS=5000
+
+      # 5. Proxmox VE Configuration
+      - PROXMOX_ENABLED=true
+      - PROXMOX_EXPORTER_ENDPOINT=${PROXMOX_EXPORTER_ENDPOINT:-http://192.168.1.120:9221/pve}
+      - PROXMOX_API_ENDPOINT=${PROXMOX_API_ENDPOINT:-https://192.168.1.120:8006}
+      - PROXMOX_TOKEN_ID=${PROXMOX_TOKEN_ID:-root@pam!monitoring}
+      - PROXMOX_TOKEN_SECRET=${PROXMOX_TOKEN_SECRET:-}
+      - PROXMOX_VERIFY_SSL=false
+      - PROXMOX_CLUSTER_NAME=PVE-Cluster-01
+      - PROXMOX_TIMEOUT_MS=5000
+    volumes:
+      - ./data:/app/data
+      - ./config.json:/app/config.json:ro
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/api/health"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"

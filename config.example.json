@@ -1,0 +1,71 @@
+{
+  "server": {
+    "port": 3000,
+    "host": "0.0.0.0",
+    "corsOrigin": "*",
+    "demoFallbackEnabled": true,
+    "pollIntervalMs": 4000
+  },
+  "prometheus": {
+    "enabled": true,
+    "endpoint": "http://192.168.1.100:9090",
+    "username": "",
+    "password": "",
+    "token": "",
+    "timeoutMs": 5000,
+    "customQueries": [
+      {
+        "name": "Node CPU Idle %",
+        "query": "100 - (avg by (instance) (rate(node_cpu_seconds_total{mode=\"idle\"}[1m])) * 100)",
+        "unit": "%"
+      },
+      {
+        "name": "Memory Available",
+        "query": "node_memory_MemAvailable_bytes",
+        "unit": "bytes"
+      }
+    ]
+  },
+  "mikrotik": {
+    "enabled": true,
+    "host": "https://192.168.1.1",
+    "port": 443,
+    "protocol": "rest",
+    "username": "admin",
+    "password": "",
+    "insecureTls": true,
+    "timeoutMs": 5000,
+    "monitoredInterfaces": ["ether1-WAN", "ether2-LAN", "bridge1", "sfp-sfpplus1"]
+  },
+  "crowdsec": {
+    "enabled": true,
+    "exporterEndpoint": "http://192.168.1.105:6060/metrics",
+    "lapiEndpoint": "http://192.168.1.105:8080",
+    "apiKey": "",
+    "machineId": "sentinel-watcher",
+    "timeoutMs": 5000
+  },
+  "uptimeKuma": {
+    "enabled": true,
+    "endpoint": "http://192.168.1.110:3001",
+    "apiKey": "",
+    "slug": "default",
+    "metricsEndpoint": "http://192.168.1.110:3001/metrics",
+    "timeoutMs": 5000
+  },
+  "proxmox": {
+    "enabled": true,
+    "exporterEndpoint": "http://192.168.1.120:9221/pve",
+    "apiEndpoint": "https://192.168.1.120:8006",
+    "tokenId": "root@pam!monitoring",
+    "tokenSecret": "",
+    "verifySsl": false,
+    "clusterName": "PVE-Cluster-01",
+    "timeoutMs": 5000
+  },
+  "storage": {
+    "sqlitePath": "./data/sentinel.sqlite",
+    "retainDays": 7,
+    "maxHistoryPoints": 500
+  }
+}

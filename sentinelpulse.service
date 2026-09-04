@@ -1,0 +1,17 @@
+[Unit]
+Description=SentinelPulse Real-Time Infrastructure Monitoring Hub
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/sentinelpulse
+ExecStart=/usr/bin/node /opt/sentinelpulse/dist/server.cjs
+Restart=always
+RestartSec=5
+Environment=NODE_ENV=production
+Environment=PORT=3000
+Environment=HOST=0.0.0.0
+
+[Install]
+WantedBy=multi-user.target
