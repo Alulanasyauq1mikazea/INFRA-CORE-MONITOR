@@ -288,7 +288,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
   const wafHost = getWafHostFromUrl(crowdsecMetricsUrl);
   const wafPort = getWafPortFromUrl(crowdsecMetricsUrl);
 
-  const [crowdsecApiKey, setCrowdsecApiKey] = useState<string>('mGV7hVEc1YeRDfwFSN2vB6QeiAj76w+BrTDO8pfmrKA');
+  const [crowdsecApiKey, setCrowdsecApiKey] = useState<string>('GF+BGfUFbDqz7iJh8vvmFtkKnDkbxZ+kyH1pPgfjCtM');
   const [customLapiPort, setCustomLapiPort] = useState<string>('8181');
   const [showWafSettingsModal, setShowWafSettingsModal] = useState<boolean>(false);
   const [lapiDiag, setLapiDiag] = useState<{
@@ -2208,7 +2208,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
     e.preventDefault();
     if (!ipToBlock) return;
     setBlockedIpList([
-      { ip: ipToBlock, country: 'MANUAL', reason: blockReason, count: 1 },
+      { ip: ipToBlock, country: 'MANUAL', reason: blockReason, count: 1 } as any,
       ...blockedIpList,
     ]);
     setIpToBlock('');
@@ -2290,7 +2290,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
           </button>
 
           <button
-            onClick={handleSaveWafConfig}
+            onClick={() => handleSaveWafConfig()}
             disabled={isSavingWafConfig}
             className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 disabled:opacity-50 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm"
             title="Simpan Host & Port WAF ke database SQLite agar otomatis & permanen tanpa edit script"
@@ -3948,7 +3948,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                   contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }}
                                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '4px' }}
                                   itemStyle={{ color: '#38bdf8', fontWeight: 600 }}
-                                  formatter={(val: number) => [`${val} Serangan (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Total Serangan']}
+                                  formatter={(val: any) => [`${val} Serangan (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Total Serangan']}
                                 />
                                 <Bar dataKey="count" fill="#0284c7" radius={[0, 6, 6, 0]} isAnimationActive={false}>
                                   {vhostChartData.map((entry, index) => (
@@ -3993,7 +3993,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                   contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }}
                                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '4px' }}
                                   itemStyle={{ color: '#c084fc', fontWeight: 600 }}
-                                  formatter={(val: number, name: string) => [`${val} Kejadian (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, name]}
+                                  formatter={(val: any, name: any) => [`${val} Kejadian (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, name]}
                                 />
                                 <Legend 
                                   layout="vertical" 
@@ -4037,7 +4037,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                   contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }}
                                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '4px' }}
                                   itemStyle={{ color: '#fbbf24', fontWeight: 600 }}
-                                  formatter={(val: number) => [`${val} IP Penyerang (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Jumlah IP']}
+                                  formatter={(val: any) => [`${val} IP Penyerang (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Jumlah IP']}
                                 />
                                 <Bar dataKey="count" fill="#f59e0b" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                                   {countryChartData.map((entry, index) => (
@@ -4083,7 +4083,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                   contentStyle={{ backgroundColor: '#020617', borderColor: '#334155', borderRadius: '0.75rem', fontSize: '12px', boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)' }}
                                   labelStyle={{ color: '#f8fafc', fontWeight: 'bold', marginBottom: '4px' }}
                                   itemStyle={{ color: '#38bdf8', fontWeight: 600 }}
-                                  formatter={(val: number) => [`${val} Requests (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Total Log']}
+                                  formatter={(val: any) => [`${val} Requests (${((val / (filteredLogs.length || 1)) * 100).toFixed(1)}%)`, 'Total Log']}
                                 />
                                 <Bar dataKey="count" radius={[6, 6, 0, 0]} isAnimationActive={false}>
                                   {statusChartData.map((entry, index) => (
@@ -6934,7 +6934,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                         color: '#f8fafc',
                         boxShadow: '0 10px 25px -5px rgba(0,0,0,0.6)'
                       }}
-                      formatter={(val: number, name: string) => [`${val.toLocaleString()} ${name === 'hits' ? 'Hits' : 'Alerts'}`, name === 'hits' ? 'Total Traffic Hits' : 'CrowdSec Alerts']}
+                      formatter={(val: any, name: any) => [`${val.toLocaleString()} ${name === 'hits' ? 'Hits' : 'Alerts'}`, name === 'hits' ? 'Total Traffic Hits' : 'CrowdSec Alerts']}
                     />
                     <Bar dataKey="hits" name="hits" fill="#f43f5e" radius={[4, 4, 0, 0]} isAnimationActive={false} />
                   </BarChart>

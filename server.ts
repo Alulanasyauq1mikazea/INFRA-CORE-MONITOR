@@ -635,7 +635,7 @@ function getActiveCrowdsecConfig() {
       lapiPort,
       metricsUrl: process.env.CROWDSEC_METRICS_URL || `http://${host}:${metricsPort}/metrics`,
       lapiUrl: process.env.CROWDSEC_LAPI_URL || `http://${host}:${lapiPort}`,
-      apiKey: process.env.CROWDSEC_API_KEY || 'mGV7hVEc1YeRDfwFSN2vB6QeiAj76w+BrTDO8pfmrKA',
+      apiKey: process.env.CROWDSEC_API_KEY || 'GF+BGfUFbDqz7iJh8vvmFtkKnDkbxZ+kyH1pPgfjCtM',
     };
   }
 }
@@ -7698,399 +7698,126 @@ interface CrowdSecAlertItem {
 }
 
 let cachedCrowdSecAlertsRaw: any[] = [];
-let cachedAggregatedDomainAlertStats: Record<string, any> = {};
+let cachedAggregatedDomainAlertStats: Record<string, any> | null = {};
 
 const initialRealCrowdSecAlerts = [
   {
-    "id": 3925,
+    "id": 8625,
     "kind": "crowdsec",
     "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (18 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 18,
+    "message": "Ip 130.12.180.117 performed 'crowdsecurity/http-probing' (13 events over 28s) on siklus.unmus.ac.id",
+    "events_count": 13,
     "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:23Z",
+    "start_at": "2026-10-20T06:41:03Z",
+    "stop_at": "2026-10-20T06:41:31Z",
     "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
+      "as_name": "Railnet LLC",
+      "as_number": "214943",
+      "cn": "US",
+      "ip": "130.12.180.117",
+      "range": "130.12.180.0/24",
+      "scope": "Ip",
+      "value": "130.12.180.117"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"//wp-includes/wlwmanifest.xml\",\"//xmlrpc.php?rsd\",\"/wp-content/plugins/wpmu-dev-dashboard/readme.txt\",\"/wp-content/plugins/pods/readme.txt\"]"
+        "value": "[\"//assets/.env\",\"//.env.dist\",\"//core/.env\",\"//laravel/.env\",\"//.env.development\",\"//server/.env\",\"//.docker/.env.dev\",\"//.envy\",\"//.envrc\",\"//prodDeploy/.env\",\"//shop/.env\"]"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/FAPERTA-access.log"
+        "value": "/var/log/nginx/SIKLUS-access.log"
       },
       {
         "key": "vhost",
-        "value": "faperta.unmus.ac.id"
+        "value": "siklus.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "404"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko, Yokohama Institute of Information Security) Chrome/124.0.0.0 Safari/537.36"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
       {
         "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/FAPERTA-access.log" },
-          { "key": "http_path", "value": "//wp-includes/wlwmanifest.xml" },
-          { "key": "http_status", "value": "404" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/79.0" },
-          { "key": "source_ip", "value": "163.52.135.2" }
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/SIKLUS-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "//core/.env"
+          },
+          {
+            "key": "http_status",
+            "value": "404"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (Yokohama Institute of Information Security)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "130.12.180.117"
+          }
         ]
       }
     ]
   },
   {
-    "id": 3924,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (17 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 17,
-    "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:22Z",
-    "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"//wp-includes/wlwmanifest.xml\",\"//xmlrpc.php?rsd\",\"/wp-content/plugins/pods/readme.txt\",\"/wp-admin/admin-ajax.php?action=wdpsso_step1\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/FISIP-access.log"
-      },
-      {
-        "key": "vhost",
-        "value": "fisip.unmus.ac.id"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/FISIP-access.log" },
-          { "key": "http_path", "value": "//wp-includes/wlwmanifest.xml" },
-          { "key": "http_status", "value": "404" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/79.0" },
-          { "key": "source_ip", "value": "163.52.135.2" }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3923,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (18 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 18,
-    "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:22Z",
-    "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/wp-content/plugins/pods/readme.txt\",\"/wp-content/plugins/pods/init.php\",\"/wp-content/plugins/wpmu-dev-dashboard/readme.txt\",\"/wp-admin/admin-ajax.php?action=wdpsso_step1\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/FKIP-access.log"
-      },
-      {
-        "key": "vhost",
-        "value": "fkip.unmus.ac.id"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/FKIP-access.log" },
-          { "key": "http_path", "value": "/wp-content/plugins/pods/readme.txt" },
-          { "key": "http_status", "value": "404" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:126.0) Gecko/20100101 Firefox/126.0" },
-          { "key": "source_ip", "value": "163.52.135.2" }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3922,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (18 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 18,
-    "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:21Z",
-    "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"//xmlrpc.php?rsd\",\"//wp-includes/wlwmanifest.xml\",\"/wp-content/plugins/pods/readme.txt\",\"/wp-content/plugins/pods/init.php\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/informatika-access.log"
-      },
-      {
-        "key": "vhost",
-        "value": "informatika.unmus.ac.id"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/informatika-access.log" },
-          { "key": "http_path", "value": "//xmlrpc.php?rsd" },
-          { "key": "http_status", "value": "200" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/79.0" },
-          { "key": "source_ip", "value": "163.52.135.2" }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3921,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (10 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 10,
-    "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:26Z",
-    "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/wp-content/plugins/wpmu-dev-dashboard/readme.txt\",\"/wp-content/plugins/pods/readme.txt\",\"/wp-admin/admin-ajax.php?action=wdpsso_step1\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/FEB-access.log"
-      },
-      {
-        "key": "vhost",
-        "value": "feb.unmus.ac.id"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/FEB-access.log" },
-          { "key": "http_path", "value": "/wp-content/plugins/wpmu-dev-dashboard/readme.txt" },
-          { "key": "http_status", "value": "404" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 Version/17.4 Safari/605.1.15" },
-          { "key": "source_ip", "value": "163.52.135.2" }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3920,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 163.52.135.2 performed 'crowdsecurity/http-probing' (10 events) at 2026-10-21 00:16:18 UTC",
-    "events_count": 10,
-    "remediation": true,
-    "start_at": "2026-10-21T00:16:18Z",
-    "stop_at": "2026-10-21T00:16:25Z",
-    "source": {
-      "ip": "163.52.135.2",
-      "as_name": "Taiwan Academic Network / Cloudflare",
-      "as_number": "13335",
-      "cn": "TW",
-      "range": "163.52.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/wp-content/plugins/pods/readme.txt\",\"/wp-content/plugins/wpmu-dev-dashboard/readme.txt\",\"/wp-admin/admin-ajax.php?action=wdpsso_step1\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/HUKUM-access.log"
-      },
-      {
-        "key": "vhost",
-        "value": "hukum.unmus.ac.id"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          { "key": "datasource_path", "value": "/var/log/nginx/HUKUM-access.log" },
-          { "key": "http_path", "value": "/wp-admin/admin-ajax.php?action=wdpsso_step1" },
-          { "key": "http_status", "value": "444" },
-          { "key": "http_user_agent", "value": "Mozilla/5.0 (X11; Linux x86_64; rv:127.0) Gecko/20100101 Firefox/127.0" },
-          { "key": "source_ip", "value": "163.52.135.2" }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3609,
+    "id": 8624,
     "kind": "crowdsec",
     "scenario": "crowdsecurity/http-sensitive-files",
-    "message": "Ip 45.148.10.62 performed 'crowdsecurity/http-sensitive-files' (8 events) at 2026-08-21 00:20:10 UTC",
+    "message": "Ip 130.12.180.117 performed 'crowdsecurity/http-sensitive-files' (8 events) on siklus.unmus.ac.id",
     "events_count": 8,
     "remediation": true,
-    "start_at": "2026-08-21T00:20:10Z",
-    "stop_at": "2026-08-21T00:20:15Z",
+    "start_at": "2026-10-20T06:41:03Z",
+    "stop_at": "2026-10-20T06:41:22Z",
     "source": {
-      "ip": "45.148.10.62",
-      "as_name": "Techoff Srv Limited",
-      "as_number": "48090",
-      "cn": "NL",
-      "range": "45.148.10.0/24"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/.env\",\"/storage/logs/laravel.log\",\"/database.sql\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/informatika-access.log"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          {
-            "key": "datasource_path",
-            "value": "/var/log/nginx/informatika-access.log"
-          },
-          {
-            "key": "http_path",
-            "value": "/.env"
-          },
-          {
-            "key": "http_status",
-            "value": "404"
-          },
-          {
-            "key": "source_ip",
-            "value": "45.148.10.62"
-          },
-          {
-            "key": "ASNOrg",
-            "value": "Techoff Srv Limited"
-          },
-          {
-            "key": "IsoCode",
-            "value": "NL"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3602,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-sensitive-files",
-    "message": "Ip 103.250.15.222 performed 'crowdsecurity/http-sensitive-files' (6 events) at 2026-08-20 23:10:05 UTC",
-    "events_count": 6,
-    "remediation": true,
-    "start_at": "2026-08-20T23:10:05Z",
-    "stop_at": "2026-08-20T23:10:10Z",
-    "source": {
-      "ip": "103.250.15.222",
-      "as_name": "PT Pandawa Global Telematika",
-      "as_number": "151590",
-      "cn": "ID",
-      "range": "103.250.15.0/24"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/.git/config\",\"/wp-config.php.bak\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/FEB-access.log"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          {
-            "key": "datasource_path",
-            "value": "/var/log/nginx/FEB-access.log"
-          },
-          {
-            "key": "http_path",
-            "value": "/.git/config"
-          },
-          {
-            "key": "http_status",
-            "value": "404"
-          },
-          {
-            "key": "source_ip",
-            "value": "103.250.15.222"
-          },
-          {
-            "key": "ASNOrg",
-            "value": "PT Pandawa Global Telematika"
-          },
-          {
-            "key": "IsoCode",
-            "value": "ID"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 3601,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-cve-probing",
-    "message": "Ip 165.22.179.40 performed 'crowdsecurity/http-cve-probing' (1 events) at 2026-08-20 22:36:12 UTC",
-    "events_count": 1,
-    "remediation": true,
-    "start_at": "2026-08-20T22:36:12Z",
-    "stop_at": "2026-08-20T22:36:15Z",
-    "source": {
-      "ip": "165.22.179.40",
-      "as_name": "DIGITALOCEAN-ASN",
-      "as_number": "14061",
+      "as_name": "Railnet LLC",
+      "as_number": "214943",
       "cn": "US",
-      "range": "165.22.0.0/16"
+      "ip": "130.12.180.117",
+      "range": "130.12.180.0/24",
+      "scope": "Ip",
+      "value": "130.12.180.117"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php\"]"
+        "value": "[\"//core/.env\",\"//laravel/.env\",\"//.env.development\",\"//server/.env\",\"//.docker/.env.dev\"]"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/PPG-access.log"
+        "value": "/var/log/nginx/SIKLUS-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "siklus.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "404"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (Yokohama Institute of Information Security)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8098,56 +7825,72 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/PPG-access.log"
+            "value": "/var/log/nginx/SIKLUS-access.log"
           },
           {
             "key": "http_path",
-            "value": "/vendor/phpunit/phpunit/src/Util/PHP/eval-stdin.php"
+            "value": "//laravel/.env"
           },
           {
             "key": "http_status",
-            "value": "403"
+            "value": "404"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (Yokohama Institute of Information Security)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "165.22.179.40"
-          },
-          {
-            "key": "ASNOrg",
-            "value": "DIGITALOCEAN-ASN"
-          },
-          {
-            "key": "IsoCode",
-            "value": "US"
+            "value": "130.12.180.117"
           }
         ]
       }
     ]
   },
   {
-    "id": 3357,
+    "id": 5001,
     "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-wordpress_wpconfig",
-    "message": "Ip 45.148.10.140 performed 'crowdsecurity/http-wordpress_wpconfig' (6 events) at 2026-08-18 19:58:08 UTC",
-    "events_count": 6,
-    "remediation": true,
-    "start_at": "2026-08-18T19:58:08Z",
-    "stop_at": "2026-08-18T19:58:45Z",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 125.160.78.250 triggered crowdsecurity/http-probing (200) on simlitabmas.unmus.ac.id [uri=/assets/theme/plugins/bower_components/sidebar-nav/dist/sidebar-nav.min.css]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-22T09:59:14+09:00",
+    "stop_at": "2026-10-22T09:59:14+09:00",
     "source": {
-      "ip": "45.148.10.140",
-      "as_name": "Techoff Srv Limited",
-      "as_number": "48090",
-      "cn": "NL",
-      "range": "45.148.10.0/24"
+      "ip": "125.160.78.250",
+      "as_name": "PT Telkom Indonesia",
+      "as_number": "7713",
+      "cn": "ID",
+      "range": "125.160.78.250/32"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/wp-config.php.txt\",\"/wp-config.php.old\",\"/wp-config.php\"]"
+        "value": "/assets/theme/plugins/bower_components/sidebar-nav/dist/sidebar-nav.min.css"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/informatika-access.log"
+        "value": "/var/log/nginx/SIMLITABMAS-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "simlitabmas.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "200"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8155,11 +7898,11 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/informatika-access.log"
+            "value": "/var/log/nginx/SIMLITABMAS-access.log"
           },
           {
             "key": "http_path",
-            "value": "/wp-config.php.txt"
+            "value": "/assets/theme/plugins/bower_components/sidebar-nav/dist/sidebar-nav.min.css"
           },
           {
             "key": "http_status",
@@ -8167,56 +7910,60 @@ const initialRealCrowdSecAlerts = [
           },
           {
             "key": "http_user_agent",
-            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+            "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/155.0.0.0 Safari/537.36"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "45.148.10.140"
-          },
-          {
-            "key": "ASNOrg",
-            "value": "Techoff Srv Limited"
-          },
-          {
-            "key": "IsoCode",
-            "value": "NL"
+            "value": "125.160.78.250"
           }
         ]
       }
     ]
   },
   {
-    "id": 2482,
+    "id": 5002,
     "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-path-traversal-probing",
-    "message": "Ip 104.155.99.55 performed 'crowdsecurity/http-path-traversal-probing' (4 events) at 2026-08-08 09:29:15 UTC",
-    "events_count": 4,
+    "scenario": "crowdsecurity/http-backdoors-attempts",
+    "message": "Ip 178.128.116.113 triggered crowdsecurity/http-backdoors-attempts (403) on tracer-study.unmus.ac.id [uri=/con.php]",
+    "events_count": 1,
     "remediation": true,
-    "start_at": "2026-08-08T09:29:14Z",
-    "stop_at": "2026-08-08T09:29:15Z",
+    "start_at": "2026-09-24T02:16:22+09:00",
+    "stop_at": "2026-09-24T02:16:22+09:00",
     "source": {
-      "ip": "104.155.99.55",
-      "as_name": "GOOGLE-CLOUD-PLATFORM",
-      "as_number": "396982",
-      "cn": "BE",
-      "range": "104.154.0.0/15"
+      "ip": "178.128.116.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "178.128.116.113/32"
     },
     "meta": [
       {
-        "key": "status",
-        "value": "[\"444\",\"404\",\"400\"]"
-      },
-      {
-        "key": "user_agent",
-        "value": "[\"Mozilla/5.0 (compatible; Amazonbot/0.1)\"]"
-      },
-      {
-        "key": "method",
-        "value": "[\"GET\"]"
-      },
-      {
         "key": "target_uri",
-        "value": "[\"/@fs/../.env\",\"/@fs/proc/self/environ\"]"
+        "value": "/con.php"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "403"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8224,151 +7971,72 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/FKIP-access.log"
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
           },
           {
             "key": "http_path",
-            "value": "/@fs/../.env"
+            "value": "/con.php"
           },
           {
             "key": "http_status",
-            "value": "444"
+            "value": "403"
           },
           {
             "key": "http_user_agent",
-            "value": "Mozilla/5.0 (compatible; Amazonbot/0.1)"
+            "value": "Mozilla/5.0 (Linux; Android 10; K) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/114.0.0.0 Mobile Safari/537.36"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "104.155.99.55"
-          },
-          {
-            "key": "ASNOrg",
-            "value": "GOOGLE-CLOUD-PLATFORM"
-          },
-          {
-            "key": "IsoCode",
-            "value": "BE"
+            "value": "178.128.116.113"
           }
         ]
       }
     ]
   },
   {
-    "id": 2479,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-generic-403-bf",
-    "message": "Ip 222.124.139.167 performed 'crowdsecurity/http-generic-403-bf' (18 events) at 2026-08-08 06:12:40 UTC",
-    "events_count": 18,
-    "remediation": true,
-    "start_at": "2026-08-08T06:12:35Z",
-    "source": {
-      "ip": "222.124.139.167",
-      "as_name": "TELKOM-INDONESIA",
-      "as_number": "7713",
-      "cn": "ID",
-      "range": "222.124.0.0/16"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/login/proses.php\",\"/admin/auth.php\"]"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          {
-            "key": "datasource_path",
-            "value": "/var/log/nginx/LAPORANFATEK-access.log"
-          },
-          {
-            "key": "http_path",
-            "value": "/login/proses.php"
-          },
-          {
-            "key": "http_status",
-            "value": "403"
-          },
-          {
-            "key": "source_ip",
-            "value": "222.124.139.167"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 2465,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-probing",
-    "message": "Ip 185.191.171.12 performed 'crowdsecurity/http-probing' (12 events) at 2026-08-07 14:15:20 UTC",
-    "events_count": 12,
-    "remediation": true,
-    "start_at": "2026-08-07T14:15:10Z",
-    "source": {
-      "ip": "185.191.171.12",
-      "as_name": "SEMRUSH-BOT",
-      "as_number": "51167",
-      "cn": "US",
-      "range": "185.191.171.0/24"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/simlitabmas/portal/login\",\"/simlitabmas/admin\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/simlitabmas-access.log"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          {
-            "key": "datasource_path",
-            "value": "/var/log/nginx/simlitabmas-access.log"
-          },
-          {
-            "key": "http_path",
-            "value": "/simlitabmas/portal/login"
-          },
-          {
-            "key": "http_status",
-            "value": "403"
-          },
-          {
-            "key": "source_ip",
-            "value": "185.191.171.12"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 2450,
+    "id": 5003,
     "kind": "crowdsec",
     "scenario": "crowdsecurity/http-bad-user-agent",
-    "message": "Ip 51.68.236.95 performed 'crowdsecurity/http-bad-user-agent' (9 events) at 2026-08-06 18:22:11 UTC",
-    "events_count": 9,
-    "remediation": true,
-    "start_at": "2026-08-06T18:22:00Z",
+    "message": "Ip 167.71.81.114 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-09-26T00:12:02+09:00",
+    "stop_at": "2026-09-26T00:12:02+09:00",
     "source": {
-      "ip": "51.68.236.95",
-      "as_name": "OVH-SAS",
-      "as_number": "16276",
-      "cn": "FR",
-      "range": "51.68.0.0/16"
+      "ip": "167.71.81.114",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "167.71.81.114/32"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/proposal/upload.php\",\"/simlitabmas/penelitian\"]"
+        "value": "LEAKIX"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/simlitabmas-access.log"
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8376,47 +8044,72 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/simlitabmas-access.log"
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
           },
           {
             "key": "http_path",
-            "value": "/proposal/upload.php"
+            "value": "LEAKIX"
           },
           {
             "key": "http_status",
-            "value": "403"
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "51.68.236.95"
+            "value": "167.71.81.114"
           }
         ]
       }
     ]
   },
   {
-    "id": 2442,
+    "id": 5004,
     "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-backdoors-attempts",
-    "message": "Ip 194.26.29.112 performed 'crowdsecurity/http-backdoors-attempts' (5 events) at 2026-08-05 11:45:00 UTC",
-    "events_count": 5,
-    "remediation": true,
-    "start_at": "2026-08-05T11:45:00Z",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 167.71.175.236 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-09-29T07:39:49+09:00",
+    "stop_at": "2026-09-29T07:39:49+09:00",
     "source": {
-      "ip": "194.26.29.112",
-      "as_name": "Baxet Group Inc.",
-      "as_number": "57523",
-      "cn": "RU",
-      "range": "194.26.29.0/24"
+      "ip": "167.71.175.236",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "167.71.175.236/32"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/laporan/kas/export.php\",\"/admin/transaksi/export.xls\"]"
+        "value": "LEAKIX"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/laporankasfatek-access.log"
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8424,47 +8117,1459 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/laporankasfatek-access.log"
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
           },
           {
             "key": "http_path",
-            "value": "/laporan/kas/export.php"
+            "value": "LEAKIX"
           },
           {
             "key": "http_status",
-            "value": "403"
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "194.26.29.112"
+            "value": "167.71.175.236"
           }
         ]
       }
     ]
   },
   {
-    "id": 2430,
+    "id": 5005,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 146.190.63.248 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-09-30T21:18:23+09:00",
+    "stop_at": "2026-09-30T21:18:23+09:00",
+    "source": {
+      "ip": "146.190.63.248",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "146.190.63.248/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "146.190.63.248"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5006,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 167.99.181.249 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-02T16:39:07+09:00",
+    "stop_at": "2026-10-02T16:39:07+09:00",
+    "source": {
+      "ip": "167.99.181.249",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "167.99.181.249/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "167.99.181.249"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5007,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 206.189.233.36 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-02T16:39:28+09:00",
+    "stop_at": "2026-10-02T16:39:28+09:00",
+    "source": {
+      "ip": "206.189.233.36",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "206.189.233.36/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "206.189.233.36"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5008,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 167.99.70.105 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-05T05:23:21+09:00",
+    "stop_at": "2026-10-05T05:23:21+09:00",
+    "source": {
+      "ip": "167.99.70.105",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "167.99.70.105/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "167.99.70.105"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5009,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 46.101.1.225 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-06T01:39:06+09:00",
+    "stop_at": "2026-10-06T01:39:06+09:00",
+    "source": {
+      "ip": "46.101.1.225",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "46.101.1.225/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "46.101.1.225"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5010,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 46.101.1.225 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-06T01:39:30+09:00",
+    "stop_at": "2026-10-06T01:39:30+09:00",
+    "source": {
+      "ip": "46.101.1.225",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "46.101.1.225/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "46.101.1.225"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5011,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 206.189.19.19 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-09T10:39:16+09:00",
+    "stop_at": "2026-10-09T10:39:16+09:00",
+    "source": {
+      "ip": "206.189.19.19",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "206.189.19.19/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "206.189.19.19"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5012,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 206.189.19.19 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-09T10:39:39+09:00",
+    "stop_at": "2026-10-09T10:39:39+09:00",
+    "source": {
+      "ip": "206.189.19.19",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "206.189.19.19/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "206.189.19.19"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5013,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 146.190.242.161 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-09T10:39:41+09:00",
+    "stop_at": "2026-10-09T10:39:41+09:00",
+    "source": {
+      "ip": "146.190.242.161",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "146.190.242.161/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "146.190.242.161"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5014,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 206.189.19.19 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-09T10:39:47+09:00",
+    "stop_at": "2026-10-09T10:39:47+09:00",
+    "source": {
+      "ip": "206.189.19.19",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "206.189.19.19/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "206.189.19.19"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5015,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 146.190.242.161 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-09T10:39:49+09:00",
+    "stop_at": "2026-10-09T10:39:49+09:00",
+    "source": {
+      "ip": "146.190.242.161",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "SG",
+      "range": "146.190.242.161/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "146.190.242.161"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5016,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 138.68.144.227 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-12T19:39:06+09:00",
+    "stop_at": "2026-10-12T19:39:06+09:00",
+    "source": {
+      "ip": "138.68.144.227",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "138.68.144.227/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "138.68.144.227"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5017,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 138.68.86.32 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-12T19:39:26+09:00",
+    "stop_at": "2026-10-12T19:39:26+09:00",
+    "source": {
+      "ip": "138.68.86.32",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "138.68.86.32/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "138.68.86.32"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5018,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 138.68.144.227 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-12T19:39:29+09:00",
+    "stop_at": "2026-10-12T19:39:29+09:00",
+    "source": {
+      "ip": "138.68.144.227",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "138.68.144.227/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "138.68.144.227"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5019,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 138.68.86.32 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-12T19:39:34+09:00",
+    "stop_at": "2026-10-12T19:39:34+09:00",
+    "source": {
+      "ip": "138.68.86.32",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "138.68.86.32/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "138.68.86.32"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5020,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 138.68.144.227 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-12T19:39:37+09:00",
+    "stop_at": "2026-10-12T19:39:37+09:00",
+    "source": {
+      "ip": "138.68.144.227",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "138.68.144.227/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "138.68.144.227"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5021,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 165.245.183.9 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-15T23:45:53+09:00",
+    "stop_at": "2026-10-15T23:45:53+09:00",
+    "source": {
+      "ip": "165.245.183.9",
+      "as_name": "Autonomous System",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "165.245.183.9/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "165.245.183.9"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5022,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 128.199.182.55 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-16T06:37:58+09:00",
+    "stop_at": "2026-10-16T06:37:58+09:00",
+    "source": {
+      "ip": "128.199.182.55",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "US",
+      "range": "128.199.182.55/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "128.199.182.55"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5023,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 93.123.109.247 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/webhook-test/*]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-17T11:41:44+09:00",
+    "stop_at": "2026-10-17T11:41:44+09:00",
+    "source": {
+      "ip": "93.123.109.247",
+      "as_name": "Telekomsis Ltd",
+      "as_number": "14061",
+      "cn": "BG",
+      "range": "93.123.109.247/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/webhook-test/*"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "tlm-scanner/2.0"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/webhook-test/*"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "tlm-scanner/2.0"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "93.123.109.247"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5024,
     "kind": "crowdsec",
     "scenario": "crowdsecurity/http-crawl-non_statics",
-    "message": "Ip 198.235.24.10 performed 'crowdsecurity/http-crawl-non_statics' (24 events) at 2026-08-04 08:12:00 UTC",
-    "events_count": 24,
+    "message": "Ip 93.123.109.247 triggered crowdsecurity/http-crawl-non_statics (403) on tracer-study.unmus.ac.id [uri=/.well-known/acme-challenge/]",
+    "events_count": 1,
     "remediation": true,
-    "start_at": "2026-08-04T08:12:00Z",
+    "start_at": "2026-10-17T11:41:44+09:00",
+    "stop_at": "2026-10-17T11:41:44+09:00",
     "source": {
-      "ip": "198.235.24.10",
-      "as_name": "Palo Alto Networks",
-      "as_number": "396986",
-      "cn": "US",
-      "range": "198.235.24.0/24"
+      "ip": "93.123.109.247",
+      "as_name": "Telekomsis Ltd",
+      "as_number": "14061",
+      "cn": "BG",
+      "range": "93.123.109.247/32"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/akademik/kurikulum\",\"/jurusan/fisip/dosen\"]"
+        "value": "/.well-known/acme-challenge/"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/fisip-access.log"
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "403"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "tlm-scanner/2.0"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8472,47 +9577,437 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/fisip-access.log"
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
           },
           {
             "key": "http_path",
-            "value": "/akademik/kurikulum"
+            "value": "/.well-known/acme-challenge/"
           },
           {
             "key": "http_status",
             "value": "403"
           },
           {
+            "key": "http_user_agent",
+            "value": "tlm-scanner/2.0"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
             "key": "source_ip",
-            "value": "198.235.24.10"
+            "value": "93.123.109.247"
           }
         ]
       }
     ]
   },
   {
-    "id": 2418,
+    "id": 5025,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-bad-user-agent",
+    "message": "Ip 207.154.197.113 triggered crowdsecurity/http-bad-user-agent (400) on tracer-study.unmus.ac.id [uri=LEAKIX]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-19T15:37:15+09:00",
+    "stop_at": "2026-10-19T15:37:15+09:00",
+    "source": {
+      "ip": "207.154.197.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "207.154.197.113/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "LEAKIX"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "LEAKIX"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "-"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "207.154.197.113"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5026,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 207.154.197.113 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-19T15:37:36+09:00",
+    "stop_at": "2026-10-19T15:37:36+09:00",
+    "source": {
+      "ip": "207.154.197.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "207.154.197.113/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "207.154.197.113"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5027,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/jira_cve-2021-26086",
+    "message": "Ip 207.154.197.113 triggered crowdsecurity/jira_cve-2021-26086 (400) on tracer-study.unmus.ac.id [uri=/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-19T15:37:38+09:00",
+    "stop_at": "2026-10-19T15:37:38+09:00",
+    "source": {
+      "ip": "207.154.197.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "207.154.197.113/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/s/8313e26333e27393e2831313/_/;/META-INF/maven/com.atlassian.jira/jira-webapp-dist/pom.properties"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "207.154.197.113"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5028,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 207.154.197.113 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-19T15:37:44+09:00",
+    "stop_at": "2026-10-19T15:37:44+09:00",
+    "source": {
+      "ip": "207.154.197.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "207.154.197.113/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "207.154.197.113"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5029,
+    "kind": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "message": "Ip 207.154.197.113 triggered crowdsecurity/http-probing (400) on tracer-study.unmus.ac.id [uri=/@vite/env]",
+    "events_count": 1,
+    "remediation": false,
+    "start_at": "2026-10-19T15:37:48+09:00",
+    "stop_at": "2026-10-19T15:37:48+09:00",
+    "source": {
+      "ip": "207.154.197.113",
+      "as_name": "DigitalOcean, LLC",
+      "as_number": "14061",
+      "cn": "DE",
+      "range": "207.154.197.113/32"
+    },
+    "meta": [
+      {
+        "key": "target_uri",
+        "value": "/@vite/env"
+      },
+      {
+        "key": "datasource_path",
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "400"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
+      }
+    ],
+    "events": [
+      {
+        "meta": [
+          {
+            "key": "datasource_path",
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
+          },
+          {
+            "key": "http_path",
+            "value": "/@vite/env"
+          },
+          {
+            "key": "http_status",
+            "value": "400"
+          },
+          {
+            "key": "http_user_agent",
+            "value": "Mozilla/5.0 (l9scan/2.0.8313e26333e27393e2831313; +https://leakix.net)"
+          },
+          {
+            "key": "http_verb",
+            "value": "GET"
+          },
+          {
+            "key": "source_ip",
+            "value": "207.154.197.113"
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "id": 5030,
     "kind": "crowdsec",
     "scenario": "crowdsecurity/http-sensitive-files",
-    "message": "Ip 185.220.101.5 performed 'crowdsecurity/http-sensitive-files' (7 events) at 2026-08-03 21:05:00 UTC",
-    "events_count": 7,
+    "message": "Ip 185.177.72.50 triggered crowdsecurity/http-sensitive-files (403) on tracer-study.unmus.ac.id [uri=/.htaccess]",
+    "events_count": 1,
     "remediation": true,
-    "start_at": "2026-08-03T21:05:00Z",
+    "start_at": "2026-10-20T09:02:54+09:00",
+    "stop_at": "2026-10-20T09:02:54+09:00",
     "source": {
-      "ip": "185.220.101.5",
-      "as_name": "Zwiebelfreunde e.V.",
-      "as_number": "60729",
-      "cn": "DE",
-      "range": "185.220.101.0/24"
+      "ip": "185.177.72.50",
+      "as_name": "Scalaxy B.V.",
+      "as_number": "14061",
+      "cn": "RU",
+      "range": "185.177.72.50/32"
     },
     "meta": [
       {
         "key": "target_uri",
-        "value": "[\"/penelitian/agrotek/.env\",\"/faperta/db_backup.sql\"]"
+        "value": "/.htaccess"
       },
       {
         "key": "datasource_path",
-        "value": "/var/log/nginx/faperta-access.log"
+        "value": "/var/log/nginx/TRACER-STUDY-access.log"
+      },
+      {
+        "key": "vhost",
+        "value": "tracer-study.unmus.ac.id"
+      },
+      {
+        "key": "http_status",
+        "value": "403"
+      },
+      {
+        "key": "http_user_agent",
+        "value": "-"
+      },
+      {
+        "key": "http_verb",
+        "value": "GET"
       }
     ],
     "events": [
@@ -8520,67 +10015,27 @@ const initialRealCrowdSecAlerts = [
         "meta": [
           {
             "key": "datasource_path",
-            "value": "/var/log/nginx/faperta-access.log"
+            "value": "/var/log/nginx/TRACER-STUDY-access.log"
           },
           {
             "key": "http_path",
-            "value": "/penelitian/agrotek/.env"
+            "value": "/.htaccess"
           },
           {
             "key": "http_status",
             "value": "403"
           },
           {
-            "key": "source_ip",
-            "value": "185.220.101.5"
-          }
-        ]
-      }
-    ]
-  },
-  {
-    "id": 2405,
-    "kind": "crowdsec",
-    "scenario": "crowdsecurity/http-generic-403-bf",
-    "message": "Ip 91.240.118.242 performed 'crowdsecurity/http-generic-403-bf' (15 events) at 2026-08-02 16:30:00 UTC",
-    "events_count": 15,
-    "remediation": true,
-    "start_at": "2026-08-02T16:30:00Z",
-    "source": {
-      "ip": "91.240.118.242",
-      "as_name": "HostRoyale Technologies",
-      "as_number": "200019",
-      "cn": "RO",
-      "range": "91.240.118.0/24"
-    },
-    "meta": [
-      {
-        "key": "target_uri",
-        "value": "[\"/portal/hukum/login\",\"/admin/auth.php\"]"
-      },
-      {
-        "key": "datasource_path",
-        "value": "/var/log/nginx/hukum-access.log"
-      }
-    ],
-    "events": [
-      {
-        "meta": [
-          {
-            "key": "datasource_path",
-            "value": "/var/log/nginx/hukum-access.log"
+            "key": "http_user_agent",
+            "value": "-"
           },
           {
-            "key": "http_path",
-            "value": "/portal/hukum/login"
-          },
-          {
-            "key": "http_status",
-            "value": "403"
+            "key": "http_verb",
+            "value": "GET"
           },
           {
             "key": "source_ip",
-            "value": "91.240.118.242"
+            "value": "185.177.72.50"
           }
         ]
       }

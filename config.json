@@ -44,10 +44,10 @@
   },
   "crowdsec": {
     "enabled": true,
-    "exporterEndpoint": "http://192.168.1.105:6060/metrics",
-    "lapiEndpoint": "http://192.168.1.105:8080",
-    "apiKey": "",
-    "machineId": "sentinel-watcher",
+    "exporterEndpoint": "http://192.168.77.77:6060/metrics",
+    "lapiEndpoint": "http://192.168.77.77:8080",
+    "apiKey": "GF+BGfUFbDqz7iJh8vvmFtkKnDkbxZ+kyH1pPgfjCtM",
+    "machineId": "netwatch-dashboard-live",
     "timeoutMs": 5000
   },
   "uptimeKuma": {

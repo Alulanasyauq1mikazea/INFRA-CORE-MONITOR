@@ -432,7 +432,6 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
 
   // REST API Test State
   const [isTestingApi, setIsTestingApi] = useState(false);
-  const [hasStoredPassword, setHasStoredPassword] = useState(false);
   const [apiTestResult, setApiTestResult] = useState<{
     status: 'idle' | 'success' | 'failed';
     mode?: string;
@@ -442,13 +441,6 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   }>({ status: 'idle' });
 
   const handleTestRealApi = async () => {
-    if (!routerPass && !hasStoredPassword) {
-      setApiTestResult({
-        status: 'failed',
-        details: 'Password MikroTik masih kosong. Harap ketikkan password router Anda pada kolom Password terlebih dahulu.',
-      });
-      return;
-    }
     setIsTestingApi(true);
     try {
       const q = new URLSearchParams({
@@ -496,7 +488,6 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
           if (d.host) setRouterHost(d.host);
           if (d.port) setRouterPort(String(d.port));
           if (d.user) setRouterUser(d.user);
-          if (d.hasPassword) setHasStoredPassword(true);
         }
       })
       .catch(() => {});
@@ -535,9 +526,6 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
       });
 
       const data = await res.json();
-      if (routerPass) {
-        setHasStoredPassword(true);
-      }
       if (res.ok && data.success && data.connected) {
         setConfigSuccessMsg(
           data.message || `Berhasil terhubung ke MikroTik ${data.boardName} (${data.host}) via REST API port ${data.port}!`
@@ -1260,23 +1248,16 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
 
           {/* Password with Eye Toggle */}
           <div className="space-y-1 relative">
-            <div className="flex items-center justify-between">
-              <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
-                <Lock className="w-3 h-3 text-purple-400" />
-                Password RouterOS
-              </label>
-              {hasStoredPassword && (
-                <span className="text-[10px] text-emerald-400 font-mono flex items-center gap-1">
-                  🔒 Tersimpan di DB
-                </span>
-              )}
-            </div>
+            <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
+              <Lock className="w-3 h-3 text-purple-400" />
+              Password RouterOS
+            </label>
             <div className="relative">
               <input
                 type={showPassword ? 'text' : 'password'}
                 value={routerPass}
                 onChange={(e) => setRouterPass(e.target.value)}
-                placeholder={hasStoredPassword ? "•••••••• (Tersimpan - ketik jika ingin ubah)" : "Ketik password router..."}
+                placeholder="Password router..."
                 className="w-full bg-slate-900 border border-slate-700/80 focus:border-purple-500 text-slate-100 font-mono text-xs rounded-xl px-3 py-2 pr-9 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
               />
               <button
@@ -1288,16 +1269,6 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                 {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {!hasStoredPassword && !routerPass && (
-              <p className="text-[10px] text-amber-400 font-mono mt-0.5">
-                ⚠️ Belum ada password tersimpan. Ketikkan password router Anda.
-              </p>
-            )}
-            {hasStoredPassword && !routerPass && (
-              <p className="text-[10px] text-slate-400 font-mono mt-0.5">
-                Password tersimpan di SQLite. Kosongkan jika tidak ingin mengubahnya.
-              </p>
-            )}
           </div>
         </div>
 

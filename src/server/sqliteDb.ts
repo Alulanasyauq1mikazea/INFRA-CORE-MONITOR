@@ -431,21 +431,19 @@ class SqliteDatabaseManager {
         creds = row?.auth_credentials ? JSON.parse(row.auth_credentials) : {};
       } catch {}
 
-      const defaultKey = process.env.CROWDSEC_API_KEY || 'mGV7hVEc1YeRDfwFSN2vB6QeiAj76w+BrTDO8pfmrKA';
+      const defaultKey = process.env.CROWDSEC_API_KEY || 'GF+BGfUFbDqz7iJh8vvmFtkKnDkbxZ+kyH1pPgfjCtM';
       const defaultLapiPort = process.env.CROWDSEC_LAPI_PORT || '8181';
       const defaultLapiUrl = process.env.CROWDSEC_LAPI_URL || `http://192.168.77.77:${defaultLapiPort}`;
 
-      if (!creds.apiKey || creds.lapiPort !== defaultLapiPort) {
-        creds.apiKey = creds.apiKey || defaultKey;
-        creds.lapiPort = creds.lapiPort || defaultLapiPort;
-        creds.lapiUrl = creds.lapiUrl || defaultLapiUrl;
+      creds.apiKey = defaultKey;
+      creds.lapiPort = defaultLapiPort;
+      creds.lapiUrl = defaultLapiUrl;
 
-        this.db.prepare(`
-          UPDATE data_sources 
-          SET auth_credentials = ?, auth_type = 'bearer', updated_at = ?
-          WHERE id = 'ds-waf-crowdsec'
-        `).run(JSON.stringify(creds), new Date().toISOString());
-      }
+      this.db.prepare(`
+        UPDATE data_sources 
+        SET auth_credentials = ?, auth_type = 'bearer', updated_at = ?
+        WHERE id = 'ds-waf-crowdsec'
+      `).run(JSON.stringify(creds), new Date().toISOString());
     } catch {}
   }
 
@@ -1024,7 +1022,7 @@ class SqliteDatabaseManager {
       `);
 
       for (const n of pveNodes) {
-        insertStmt.run(
+        (insertStmt as any).run(
           n.id, n.name, n.category, n.driver, n.endpoint_url, n.ip_address, n.port,
           n.auth_type, JSON.stringify({ token: 'PVEAPIToken=root@pam!monitoring=...' }),
           n.scrape_interval_sec, n.status, n.last_status, n.last_latency_ms,
@@ -1448,7 +1446,7 @@ class SqliteDatabaseManager {
       ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
     `);
 
-    stmt.run(
+    (stmt as any).run(
       target.id,
       target.job,
       target.jobName,
@@ -1509,7 +1507,7 @@ class SqliteDatabaseManager {
       WHERE id = ?
     `);
 
-    stmt.run(
+    (stmt as any).run(
       merged.job,
       merged.jobName,
       merged.endpoint,

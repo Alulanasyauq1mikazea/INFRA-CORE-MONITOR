@@ -39,14 +39,6 @@ import {
   BarChart3,
   History,
   Download,
-  Router,
-  User,
-  Eye,
-  EyeOff,
-  Key,
-  ChevronDown,
-  ChevronUp,
-  Network,
 } from 'lucide-react';
 import { PrometheusTarget } from '../types';
 import {
@@ -66,21 +58,6 @@ export const PrometheusTargetManager: React.FC = () => {
   const [promHost, setPromHost] = useState<string>('http://192.168.77.30:9090');
   const [loading, setLoading] = useState<boolean>(false);
   const [saving, setSaving] = useState<boolean>(false);
-
-  // MikroTik Source Sync State
-  const [mtHost, setMtHost] = useState<string>('192.168.77.1');
-  const [mtPort, setMtPort] = useState<string>('80');
-  const [mtUser, setMtUser] = useState<string>('admin');
-  const [mtPass, setMtPass] = useState<string>('');
-  const [showMtPass, setShowMtPass] = useState<boolean>(false);
-  const [isMtTesting, setIsMtTesting] = useState<boolean>(false);
-  const [isMtSaving, setIsMtSaving] = useState<boolean>(false);
-  const [mtSyncMessage, setMtSyncMessage] = useState<{
-    type: 'success' | 'error';
-    text: string;
-    details?: string;
-  } | null>(null);
-  const [showMtSyncPanel, setShowMtSyncPanel] = useState<boolean>(true);
   const [activeTargets, setActiveTargets] = useState<PrometheusTarget[]>(() => {
     try {
       const savedLocal = localStorage.getItem('omniguard_prometheus_targets') || localStorage.getItem('netwatch_prometheus_targets');
@@ -440,18 +417,6 @@ export const PrometheusTargetManager: React.FC = () => {
       .then((d) => {
         if (d && d.success && d.promHost) {
           setPromHost(d.promHost);
-        }
-      })
-      .catch(() => {});
-
-    // 0b. Load current configured MikroTik Credentials from database
-    fetch('/api/mikrotik/config')
-      .then((r) => r.json())
-      .then((d) => {
-        if (d && d.success) {
-          if (d.host) setMtHost(d.host);
-          if (d.port) setMtPort(String(d.port));
-          if (d.user) setMtUser(d.user);
         }
       })
       .catch(() => {});
@@ -852,81 +817,6 @@ export const PrometheusTargetManager: React.FC = () => {
     }
   };
 
-  const handleTestMikrotikAuth = async () => {
-    setIsMtTesting(true);
-    setMtSyncMessage(null);
-    try {
-      const q = new URLSearchParams({
-        host: mtHost.trim(),
-        port: mtPort.trim(),
-        user: mtUser.trim(),
-        pass: mtPass,
-      }).toString();
-      const res = await fetch(`/api/mikrotik/status?${q}`);
-      const data = await res.json();
-      if (data.connected && data.method === 'REST_API') {
-        setMtSyncMessage({
-          type: 'success',
-          text: `Koneksi BERHASIL! Terhubung ke MikroTik ${data.boardName || 'RouterOS'} (${data.version}) pada http://${data.host}:${data.restPort}.`,
-          details: `Uptime: ${data.uptime || '-'} | CPU Load: ${data.cpuLoad ?? 0}% | Memory: ${data.freeMemoryMb ?? 0} MB Free. User '${data.user}' terverifikasi valid!`,
-        });
-      } else {
-        setMtSyncMessage({
-          type: 'error',
-          text: data.error || 'Gagal terhubung ke REST API MikroTik.',
-          details: data.note || 'Pastikan IP benar, port www (80) aktif di IP > Services WinBox, dan user memiliki hak akses rest-api.',
-        });
-      }
-    } catch (err: any) {
-      setMtSyncMessage({
-        type: 'error',
-        text: `Gagal menghubungi backend: ${err.message}`,
-      });
-    } finally {
-      setIsMtTesting(false);
-    }
-  };
-
-  const handleSaveMikrotikCredentials = async () => {
-    setIsMtSaving(true);
-    setMtSyncMessage(null);
-    try {
-      const res = await fetch('/api/mikrotik/config', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          host: mtHost.trim(),
-          port: mtPort.trim(),
-          user: mtUser.trim(),
-          pass: mtPass,
-          saveAnyway: true,
-        }),
-      });
-      const data = await res.json();
-      if (res.ok && data.success && data.connected) {
-        setMtSyncMessage({
-          type: 'success',
-          text: `Kredensial disimpan ke SQLite & target disinkronkan! Terhubung ke ${data.boardName} (${data.host}).`,
-          details: `RouterOS ${data.version} | Uptime: ${data.uptime}. Semua metrik interface & gateway telah diperbarui.`,
-        });
-        await fetchTargets(true, true);
-      } else {
-        setMtSyncMessage({
-          type: 'error',
-          text: data.error || 'Gagal terhubung ke MikroTik, namun konfigurasi tetap tersimpan di SQLite data/netwatch.db.',
-          details: 'Pastikan port WWW (80) dibuka di MikroTik dan user/password sudah benar.',
-        });
-      }
-    } catch (err: any) {
-      setMtSyncMessage({
-        type: 'error',
-        text: `Gagal menyimpan kredensial: ${err.message}`,
-      });
-    } finally {
-      setIsMtSaving(false);
-    }
-  };
-
   const handleCleanSlate = async () => {
     if (
       !window.confirm(
@@ -1195,176 +1085,6 @@ export const PrometheusTargetManager: React.FC = () => {
               Classic UI <ExternalLink className="w-3 h-3" />
             </a>
           </div>
-        </div>
-
-        {/* MIKROTIK ROUTEROS GATEWAY CREDENTIAL SYNC PANEL */}
-        <div className="bg-slate-950 p-4 rounded-xl border border-slate-800/80 shadow-xl space-y-3">
-          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2 pb-2.5 border-b border-slate-800/70">
-            <div className="flex items-center space-x-2.5">
-              <div className="p-1.5 rounded-lg bg-orange-500/10 text-orange-400 border border-orange-500/20">
-                <Router className="w-4 h-4" />
-              </div>
-              <div>
-                <h4 className="text-xs font-bold text-slate-200 flex items-center gap-2 font-mono">
-                  Gateway MikroTik RouterOS (REST API / WWW)
-                  <span className="text-[10px] text-cyan-400 font-normal px-2 py-0.5 rounded-full bg-cyan-950/60 border border-cyan-800/50">
-                    Port REST: {mtPort}
-                  </span>
-                </h4>
-                <p className="text-[11px] text-slate-400">
-                  Sinkronisasi IP, Username, dan Password RouterOS untuk mengambil telemetri CPU, Traffic Interface, & DHCP Lease secara langsung.
-                </p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={() => setShowMtSyncPanel(!showMtSyncPanel)}
-              className="text-slate-400 hover:text-slate-200 text-xs font-mono flex items-center gap-1 cursor-pointer"
-            >
-              <span>{showMtSyncPanel ? 'Sembunyikan' : 'Buka Pengaturan'}</span>
-              {showMtSyncPanel ? <ChevronUp className="w-3.5 h-3.5" /> : <ChevronDown className="w-3.5 h-3.5" />}
-            </button>
-          </div>
-
-          {showMtSyncPanel && (
-            <div className="space-y-3 pt-1">
-              {/* Form Inputs Grid */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5 items-end">
-                {/* IP Host */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
-                    <Globe className="w-3 h-3 text-cyan-400" />
-                    IP Host MikroTik
-                  </label>
-                  <input
-                    type="text"
-                    value={mtHost}
-                    onChange={(e) => setMtHost(e.target.value)}
-                    placeholder="192.168.77.1"
-                    className="w-full bg-slate-900 border border-slate-700/80 focus:border-cyan-500 text-cyan-300 font-mono text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-cyan-500/50"
-                  />
-                </div>
-
-                {/* Port */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
-                    <Server className="w-3 h-3 text-amber-400" />
-                    Port REST (WWW)
-                  </label>
-                  <input
-                    type="text"
-                    value={mtPort}
-                    onChange={(e) => setMtPort(e.target.value)}
-                    placeholder="80"
-                    className="w-full bg-slate-900 border border-slate-700/80 focus:border-amber-500 text-amber-300 font-mono text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-amber-500/50"
-                  />
-                </div>
-
-                {/* Username */}
-                <div className="space-y-1">
-                  <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
-                    <User className="w-3 h-3 text-emerald-400" />
-                    Username RouterOS
-                  </label>
-                  <input
-                    type="text"
-                    value={mtUser}
-                    onChange={(e) => setMtUser(e.target.value)}
-                    placeholder="admin"
-                    className="w-full bg-slate-900 border border-slate-700/80 focus:border-emerald-500 text-emerald-300 font-mono text-xs rounded-xl px-3 py-1.5 focus:outline-none focus:ring-1 focus:ring-emerald-500/50"
-                  />
-                </div>
-
-                {/* Password with Eye Toggle */}
-                <div className="space-y-1 relative">
-                  <label className="text-[11px] font-semibold text-slate-300 font-mono flex items-center gap-1">
-                    <Key className="w-3 h-3 text-purple-400" />
-                    Password RouterOS
-                  </label>
-                  <div className="relative">
-                    <input
-                      type={showMtPass ? 'text' : 'password'}
-                      value={mtPass}
-                      onChange={(e) => setMtPass(e.target.value)}
-                      placeholder="Password router..."
-                      className="w-full bg-slate-900 border border-slate-700/80 focus:border-purple-500 text-purple-200 font-mono text-xs rounded-xl px-3 py-1.5 pr-8 focus:outline-none focus:ring-1 focus:ring-purple-500/50"
-                    />
-                    <button
-                      type="button"
-                      onClick={() => setShowMtPass(!showMtPass)}
-                      className="absolute right-2 top-1.5 text-slate-400 hover:text-slate-200 cursor-pointer"
-                      title={showMtPass ? 'Sembunyikan Password' : 'Lihat Password'}
-                    >
-                      {showMtPass ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                    </button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Action Buttons & Info */}
-              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-800/60">
-                <div className="text-[11px] text-slate-400 font-mono">
-                  💡 <em>Tips:</em> Pastikan service <strong>www</strong> aktif di WinBox (<code>IP &gt; Services</code>) dan user memiliki hak <code>rest-api</code>.
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={handleTestMikrotikAuth}
-                    disabled={isMtTesting}
-                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-cyan-300 border border-cyan-800/60 rounded-xl text-xs font-semibold font-mono flex items-center gap-1.5 transition disabled:opacity-50 cursor-pointer"
-                    title="Uji apakah username & password valid tanpa menyimpan dulu"
-                  >
-                    <RefreshCw className={`w-3.5 h-3.5 ${isMtTesting ? 'animate-spin' : ''}`} />
-                    <span>{isMtTesting ? 'Menguji...' : '🧪 Uji Koneksi (Test Auth)'}</span>
-                  </button>
-
-                  <button
-                    type="button"
-                    onClick={handleSaveMikrotikCredentials}
-                    disabled={isMtSaving}
-                    className="px-3.5 py-1.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white rounded-xl text-xs font-bold font-mono flex items-center gap-1.5 shadow-md shadow-orange-900/30 disabled:opacity-50 transition cursor-pointer"
-                  >
-                    <Zap className={`w-3.5 h-3.5 ${isMtSaving ? 'animate-spin' : ''}`} />
-                    <span>{isMtSaving ? 'Menyimpan...' : '⚡ Simpan & Sinkronkan MikroTik'}</span>
-                  </button>
-                </div>
-              </div>
-
-              {/* Status Result Feedback */}
-              {mtSyncMessage && (
-                <div
-                  className={`p-3 rounded-xl border text-xs font-mono animate-fade-in flex items-start justify-between gap-2 ${
-                    mtSyncMessage.type === 'success'
-                      ? 'bg-emerald-950/80 border-emerald-500/40 text-emerald-200'
-                      : 'bg-rose-950/80 border-rose-500/40 text-rose-200'
-                  }`}
-                >
-                  <div className="flex items-start gap-2">
-                    {mtSyncMessage.type === 'success' ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
-                    ) : (
-                      <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-                    )}
-                    <div>
-                      <div className="font-bold">{mtSyncMessage.text}</div>
-                      {mtSyncMessage.details && (
-                        <div className="text-[11px] opacity-80 mt-0.5">{mtSyncMessage.details}</div>
-                      )}
-                    </div>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={() => setMtSyncMessage(null)}
-                    className="opacity-70 hover:opacity-100 font-bold px-1 cursor-pointer"
-                  >
-                    ✕
-                  </button>
-                </div>
-              )}
-            </div>
-          )}
         </div>
       </div>
 
