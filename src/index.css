@@ -2,25 +2,53 @@
 
 @layer base {
   body {
-    background-color: #0B0D11;
-    color: #E0E0E0;
-    font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+    background-color: #020617;
+    color: #cbd5e1;
     letter-spacing: -0.01em;
+  }
+
+  code, kbd, samp, pre, .font-mono {
+    font-family: 'JetBrains Mono', ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
   }
 }
 
-/* Custom scrollbar for Clean Minimalism UI */
+/* High Density Custom Sleek Dark Scrollbar */
 ::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 4px;
+  height: 4px;
 }
 ::-webkit-scrollbar-track {
-  background: #0B0D11;
+  background: #020617;
 }
 ::-webkit-scrollbar-thumb {
-  background: #30363D;
+  background: #1e293b;
   border-radius: 2px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: #484F58;
+  background: #334155;
+}
+
+/* High Density Grid Backdrop Pattern */
+.bg-tech-grid {
+  background-image: radial-gradient(#1e293b 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+/* High Density Glow Accents */
+.glow-cyan {
+  box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+}
+
+.glow-emerald {
+  box-shadow: 0 0 12px rgba(52, 211, 153, 0.25);
+}
+
+.glow-rose {
+  box-shadow: 0 0 12px rgba(244, 63, 94, 0.25);
+}
+
+/* Leaflet Cyber Dark Inversion Filter for OSM Tiles */
+.cyber-dark-tiles .leaflet-tile {
+  filter: brightness(0.65) invert(1) contrast(2.8) hue-rotate(200deg) saturate(0.35) brightness(0.7);
 }

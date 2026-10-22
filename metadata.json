@@ -1,7 +1,6 @@
 {
-  "name": "SentinelPulse - Real-Time Infrastructure Monitoring",
-  "description": "Config-driven real-time infrastructure dashboard for Prometheus, MikroTik, CrowdSec, Uptime Kuma, and Proxmox VE with Express, SQLite, and Socket.io.",
+  "name": "OmniGuard-Live",
+  "description": "Unified infrastructure and cybersecurity monitoring platform for MikroTik, Ruijie Gateways, Linux Servers, Proxmox VMs, WAF Firewall, and Web Services with live Prometheus telemetry, InfluxDB audit trails, and automated alerts.",
   "requestFramePermissions": [],
   "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
 }
-

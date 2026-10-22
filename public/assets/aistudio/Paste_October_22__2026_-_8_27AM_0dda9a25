@@ -1,0 +1,337 @@
+reserveproxy@proxyunmus:~$ sudo docker exec -it crowdsec cscli decisions list
+╭──────────┬──────────┬────────────────────┬────────────────────────────────────────────┬────────┬─────────┬───────────────────────────────────────┬────────┬────────────┬──────────╮
+│    ID    │  Source  │     Scope:Value    │                   Reason                   │ Action │ Country │                   AS                  │ Events │ expiration │ Alert ID │
+├──────────┼──────────┼────────────────────┼────────────────────────────────────────────┼────────┼─────────┼───────────────────────────────────────┼────────┼────────────┼──────────┤
+│ 17482070 │ crowdsec │ Ip:13.232.180.98   │ crowdsecurity/http-sensitive-files         │ ban    │ IN      │ 16509 AMAZON-02                       │ 5      │ 23h43m50s  │ 8794     │
+│ 17482069 │ crowdsec │ Ip:43.201.41.178   │ crowdsecurity/http-probing                 │ ban    │ KR      │ 16509 AMAZON-02                       │ 11     │ 47h30m54s  │ 8793     │
+│ 17467067 │ crowdsec │ Ip:45.138.12.16    │ crowdsecurity/http-sensitive-files         │ ban    │ LT      │                                       │ 5      │ 23h10m55s  │ 8790     │
+│ 17467066 │ crowdsec │ Ip:13.125.202.92   │ crowdsecurity/http-probing                 │ ban    │ KR      │ 16509 AMAZON-02                       │ 11     │ 23h5m37s   │ 8789     │
+│ 17467064 │ crowdsec │ Ip:188.166.217.229 │ crowdsecurity/http-probing                 │ ban    │ SG      │ 14061 DIGITALOCEAN-ASN                │ 12     │ 22h57m42s  │ 8787     │
+│ 17467063 │ crowdsec │ Ip:144.172.94.4    │ crowdsecurity/CVE-2017-9841                │ ban    │ US      │ 14956 ROUTERHOSTING                   │ 1      │ 46h57m9s   │ 8786     │
+│ 17467062 │ crowdsec │ Ip:16.184.3.213    │ crowdsecurity/http-probing                 │ ban    │ KR      │ 16509 AMAZON-02                       │ 11     │ 46h27m49s  │ 8785     │
+│ 17467060 │ crowdsec │ Ip:34.77.149.100   │ crowdsecurity/http-bad-user-agent          │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 2      │ 21h58m48s  │ 8783     │
+│ 17452059 │ crowdsec │ Ip:93.123.109.230  │ crowdsecurity/http-crawl-non_statics       │ ban    │ BG      │ 48090 Techoff Srv Limited             │ 43     │ 68h36m6s   │ 8779     │
+│ 17452056 │ crowdsec │ Ip:103.89.2.246    │ crowdsecurity/http-probing                 │ ban    │ ID      │ 133800 PT Biznet Gio Nusantara        │ 16     │ 44h28m58s  │ 8776     │
+│ 17452055 │ crowdsec │ Ip:45.138.12.19    │ crowdsecurity/http-wordpress_wpconfig      │ ban    │ LT      │                                       │ 6      │ 67h29m59s  │ 8775     │
+│ 17437052 │ crowdsec │ Ip:66.132.186.188  │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │                                       │ 2      │ 43h6m12s   │ 8771     │
+│ 17437051 │ crowdsec │ Ip:185.55.7.171    │ crowdsecurity/http-probing                 │ ban    │ US      │ 5650 FRONTIER-FRTR                    │ 11     │ 42h32m14s  │ 8770     │
+│ 17437049 │ crowdsec │ Ip:45.138.12.10    │ crowdsecurity/http-probing                 │ ban    │ LT      │                                       │ 11     │ 18h13m17s  │ 8768     │
+│ 17422048 │ crowdsec │ Ip:45.138.12.178   │ crowdsecurity/http-sensitive-files         │ ban    │ LT      │                                       │ 5      │ 89h8m23s   │ 8766     │
+│ 17422047 │ crowdsec │ Ip:35.236.198.77   │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 16h44m44s  │ 8765     │
+│ 17422046 │ crowdsec │ Ip:45.138.12.68    │ crowdsecurity/http-sensitive-files         │ ban    │ LT      │                                       │ 6      │ 256h27m44s │ 8763     │
+│ 17422043 │ crowdsec │ Ip:157.85.210.73   │ crowdsecurity/http-wordpress_user-enum     │ ban    │ ID      │ 139994 PT XL Axiata Tbk               │ 6      │ 15h44m11s  │ 8759     │
+│ 17422042 │ crowdsec │ Ip:136.111.7.237   │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 15h37m46s  │ 8758     │
+│ 17422041 │ crowdsec │ Ip:34.21.31.230    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 15h30m21s  │ 8757     │
+│ 17407039 │ crowdsec │ Ip:160.187.211.233 │ crowdsecurity/http-cve-probing             │ ban    │ MY      │ 206216 Advin Services LLC             │ 1      │ 14h36m11s  │ 8754     │
+│ 17407038 │ crowdsec │ Ip:35.245.125.145  │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 14h5m39s   │ 8753     │
+│ 17407037 │ crowdsec │ Ip:34.75.203.24    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 14h2m8s    │ 8752     │
+│ 17407036 │ crowdsec │ Ip:34.11.105.85    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 13h53m41s  │ 8751     │
+│ 17407035 │ crowdsec │ Ip:34.48.129.24    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 13h32m36s  │ 8750     │
+│ 17407034 │ crowdsec │ Ip:34.156.226.144  │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 2      │ 13h29m23s  │ 8749     │
+│ 17392033 │ crowdsec │ Ip:68.183.172.177  │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                │ 1      │ 12h16m58s  │ 8747     │
+│ 17392032 │ crowdsec │ Ip:34.42.82.76     │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 12h6m49s   │ 8746     │
+│ 17392031 │ crowdsec │ Ip:34.16.27.224    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 11h32m5s   │ 8745     │
+│ 17392030 │ crowdsec │ Ip:34.172.168.96   │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 11h25m9s   │ 8744     │
+│ 17392029 │ crowdsec │ Ip:34.55.62.217    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 11h18m40s  │ 8743     │
+│ 17392028 │ crowdsec │ Ip:5.253.84.92     │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 213438 ColocaTel Inc.                 │ 1      │ 59h17m59s  │ 8742     │
+│ 17377027 │ crowdsec │ Ip:34.150.219.198  │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 11h6m34s   │ 8740     │
+│ 17377026 │ crowdsec │ Ip:34.41.207.100   │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 10h42m16s  │ 8739     │
+│ 17377025 │ crowdsec │ Ip:84.233.212.24   │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 212238 Datacamp Limited               │ 7      │ 10h21m26s  │ 8738     │
+│ 17377022 │ crowdsec │ Ip:159.89.187.171  │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                │ 1      │ 9h39m39s   │ 8735     │
+│ 17362021 │ crowdsec │ Ip:34.34.160.1     │ crowdsecurity/http-bad-user-agent          │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 2      │ 9h11m1s    │ 8733     │
+│ 17362020 │ crowdsec │ Ip:152.67.75.161   │ crowdsecurity/http-probing                 │ ban    │ CH      │ 31898 ORACLE-BMC-31898                │ 11     │ 33h10m51s  │ 8732     │
+│ 17362016 │ crowdsec │ Ip:3.252.160.71    │ crowdsecurity/http-probing                 │ ban    │ IE      │ 16509 AMAZON-02                       │ 11     │ 32h41m35s  │ 8728     │
+│ 17362014 │ crowdsec │ Ip:35.89.59.107    │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 16509 AMAZON-02                       │ 5      │ 7h58m8s    │ 8726     │
+│ 17362013 │ crowdsec │ Ip:159.65.58.19    │ crowdsecurity/http-cve-probing             │ ban    │ GB      │ 14061 DIGITALOCEAN-ASN                │ 1      │ 7h54m51s   │ 8725     │
+│ 17362012 │ crowdsec │ Ip:82.158.193.164  │ crowdsecurity/http-probing                 │ ban    │ ES      │                                       │ 11     │ 31h49m58s  │ 8724     │
+│ 17362011 │ crowdsec │ Ip:56.155.81.100   │ crowdsecurity/http-sensitive-files         │ ban    │ JP      │ 16509 AMAZON-02                       │ 5      │ 7h34m41s   │ 8723     │
+│ 17347010 │ crowdsec │ Ip:45.156.87.160   │ crowdsecurity/http-admin-interface-probing │ ban    │ NL      │ 51396 Pfcloud UG (haftungsbeschrankt) │ 3      │ 5h40m32s   │ 8720     │
+│ 17332009 │ crowdsec │ Ip:34.35.58.250    │ crowdsecurity/http-sensitive-files         │ ban    │ ZA      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 5      │ 4h12m51s   │ 8717     │
+│ 17332008 │ crowdsec │ Ip:34.78.39.54     │ crowdsecurity/http-bad-user-agent          │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 2      │ 4h9m0s     │ 8716     │
+│ 17332007 │ crowdsec │ Ip:174.138.27.225  │ crowdsecurity/http-cve-probing             │ ban    │ SG      │ 14061 DIGITALOCEAN-ASN                │ 1      │ 3h55m7s    │ 8715     │
+│ 17332006 │ crowdsec │ Ip:34.175.173.22   │ crowdsecurity/http-probing                 │ ban    │ ES      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 11     │ 27h45m54s  │ 8714     │
+│ 17317003 │ crowdsec │ Ip:103.253.27.204  │ crowdsecurity/http-cve-probing             │ ban    │ SG      │ 133210 EN Technologies Pte Ltd        │ 1      │ 2h54m58s   │ 8709     │
+│ 17302002 │ crowdsec │ Ip:163.52.135.2    │ crowdsecurity/http-probing                 │ ban    │         │                                       │ 11     │ 54m24s     │ 8707     │
+│ 17302001 │ crowdsec │ Ip:169.40.142.202  │ crowdsecurity/http-sensitive-files         │ ban    │ DE      │ 61317 Hivelocity LLC                  │ 5      │ 23m30s     │ 8706     │
+│ 17302000 │ crowdsec │ Ip:163.52.135.4    │ crowdsecurity/http-probing                 │ ban    │         │                                       │ 11     │ 2m8s       │ 8705     │
+│ 17286999 │ crowdsec │ Ip:213.209.159.133 │ crowdsecurity/http-probing                 │ ban    │ TW      │ 208137 Feo Prest SRL                  │ 11     │ 45h53m56s  │ 8703     │
+│ 17271997 │ crowdsec │ Ip:13.40.73.76     │ crowdsecurity/http-probing                 │ ban    │ GB      │ 16509 AMAZON-02                       │ 11     │ 20h56m57s  │ 8699     │
+│ 17271994 │ crowdsec │ Ip:99.79.67.199    │ crowdsecurity/http-probing                 │ ban    │ CA      │ 16509 AMAZON-02                       │ 11     │ 20h53m53s  │ 8696     │
+│ 17271992 │ crowdsec │ Ip:203.159.90.184  │ crowdsecurity/http-probing                 │ ban    │ NL      │ 210558 1337 Services GmbH             │ 11     │ 20h47m46s  │ 8694     │
+│ 17271991 │ crowdsec │ Ip:18.118.106.45   │ crowdsecurity/http-probing                 │ ban    │ US      │ 16509 AMAZON-02                       │ 11     │ 20h37m13s  │ 8693     │
+│ 17271981 │ crowdsec │ Ip:130.12.180.117  │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 214943 Railnet LLC                    │ 6      │ 91h16m14s  │ 8683     │
+│ 17241971 │ crowdsec │ Ip:92.240.217.39   │ crowdsecurity/http-probing                 │ ban    │ US      │ 209372 WS Telecom Inc                 │ 11     │ 16h58m25s  │ 8671     │
+│ 17241969 │ crowdsec │ Ip:45.148.10.12    │ crowdsecurity/http-probing                 │ ban    │ NL      │ 48090 Techoff Srv Limited             │ 11     │ 16h43m1s   │ 8669     │
+│ 17241968 │ crowdsec │ Ip:45.45.237.39    │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │ 400529 INFRALY-LLC                    │ 2      │ 88h39m47s  │ 8668     │
+│ 17241966 │ crowdsec │ Ip:54.94.85.181    │ crowdsecurity/http-crawl-non_statics       │ ban    │ BR      │ 16509 AMAZON-02                       │ 43     │ 16h19m40s  │ 8666     │
+│ 17211952 │ crowdsec │ Ip:35.233.99.27    │ crowdsecurity/http-crawl-non_statics       │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 44     │ 59h15m18s  │ 8650     │
+│ 17196946 │ crowdsec │ Ip:34.156.22.151   │ crowdsecurity/http-crawl-non_statics       │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 44     │ 153h19m7s  │ 8642     │
+│ 17181941 │ crowdsec │ Ip:34.156.249.47   │ crowdsecurity/http-crawl-non_statics       │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 44     │ 57h9m56s   │ 8635     │
+│ 17166929 │ crowdsec │ Ip:34.34.160.116   │ crowdsecurity/http-crawl-non_statics       │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 45     │ 150h56m5s  │ 8621     │
+│ 17166924 │ crowdsec │ Ip:162.243.10.135  │ crowdsecurity/http-probing                 │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                │ 11     │ 6h38m19s   │ 8615     │
+│ 17166922 │ crowdsec │ Ip:34.91.90.121    │ crowdsecurity/CVE-2017-9841                │ ban    │ NL      │ 396982 GOOGLE-CLOUD-PLATFORM          │ 1      │ 54h30m32s  │ 8613     │
+╰──────────┴──────────┴────────────────────┴────────────────────────────────────────────┴────────┴─────────┴───────────────────────────────────────┴────────┴────────────┴──────────╯
+32 duplicated entries skipped
+reserveproxy@proxyunmus:~$ sudo docker exec -it crowdsec cscli alerts list
+╭──────┬────────────────────┬────────────────────────────────────────┬─────────┬──────────────────────────────────────┬───────────┬──────────────────────┬──────────╮
+│  ID  │        value       │                 reason                 │ country │                  as                  │ decisions │      created_at      │   kind   │
+├──────┼────────────────────┼────────────────────────────────────────┼─────────┼──────────────────────────────────────┼───────────┼──────────────────────┼──────────┤
+│ 8794 │ Ip:13.232.180.98   │ crowdsecurity/http-sensitive-files     │ IN      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T23:05:45Z │ crowdsec │
+│ 8793 │ Ip:43.201.41.178   │ crowdsecurity/http-probing             │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T22:52:49Z │ crowdsec │
+│ 8792 │ Ip:43.201.41.178   │ crowdsecurity/http-sensitive-files     │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T22:52:49Z │ crowdsec │
+│ 8790 │ Ip:45.138.12.16    │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T22:32:50Z │ crowdsec │
+│ 8789 │ Ip:13.125.202.92   │ crowdsecurity/http-probing             │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T22:27:32Z │ crowdsec │
+│ 8788 │ Ip:13.125.202.92   │ crowdsecurity/http-sensitive-files     │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T22:27:32Z │ crowdsec │
+│ 8787 │ Ip:188.166.217.229 │ crowdsecurity/http-probing             │ SG      │ 14061 DIGITALOCEAN-ASN               │ ban:1     │ 2026-10-21T22:18:16Z │ crowdsec │
+│ 8786 │ Ip:144.172.94.4    │ crowdsecurity/CVE-2017-9841            │ US      │ 14956 ROUTERHOSTING                  │ ban:1     │ 2026-10-21T22:19:06Z │ crowdsec │
+│ 8785 │ Ip:16.184.3.213    │ crowdsecurity/http-probing             │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T21:49:44Z │ crowdsec │
+│ 8784 │ Ip:16.184.3.213    │ crowdsecurity/http-sensitive-files     │ KR      │ 16509 AMAZON-02                      │ ban:1     │ 2026-10-21T21:49:44Z │ crowdsec │
+│ 8783 │ Ip:34.77.149.100   │ crowdsecurity/http-bad-user-agent      │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T21:20:45Z │ crowdsec │
+│ 8782 │ Ip:144.172.94.4    │ crowdsecurity/http-technology-probing  │ US      │ 14956 ROUTERHOSTING                  │           │ 2026-10-21T21:14:58Z │ crowdsec │
+│ 8780 │ Ip:93.123.109.230  │ crowdsecurity/http-technology-probing  │ BG      │ 48090 Techoff Srv Limited            │           │ 2026-10-21T19:58:04Z │ crowdsec │
+│ 8779 │ Ip:93.123.109.230  │ crowdsecurity/http-crawl-non_statics   │ BG      │ 48090 Techoff Srv Limited            │ ban:1     │ 2026-10-21T19:58:02Z │ crowdsec │
+│ 8778 │ Ip:93.123.109.230  │ crowdsecurity/http-probing             │ BG      │ 48090 Techoff Srv Limited            │ ban:1     │ 2026-10-21T19:58:02Z │ crowdsec │
+│ 8777 │ Ip:93.123.109.230  │ crowdsecurity/http-sensitive-files     │ BG      │ 48090 Techoff Srv Limited            │ ban:1     │ 2026-10-21T19:58:02Z │ crowdsec │
+│ 8776 │ Ip:103.89.2.246    │ crowdsecurity/http-probing             │ ID      │ 133800 PT Biznet Gio Nusantara       │ ban:1     │ 2026-10-21T19:49:56Z │ crowdsec │
+│ 8775 │ Ip:45.138.12.19    │ crowdsecurity/http-wordpress_wpconfig  │ LT      │                                      │ ban:1     │ 2026-10-21T18:51:56Z │ crowdsec │
+│ 8774 │ Ip:45.138.12.19    │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T18:51:52Z │ crowdsec │
+│ 8773 │ Ip:45.138.12.19    │ crowdsecurity/http-crawl-non_statics   │ LT      │                                      │ ban:1     │ 2026-10-21T18:51:45Z │ crowdsec │
+│ 8771 │ Ip:66.132.186.188  │ crowdsecurity/http-bad-user-agent      │ US      │                                      │ ban:1     │ 2026-10-21T18:28:00Z │ crowdsec │
+│ 8770 │ Ip:185.55.7.171    │ crowdsecurity/http-probing             │ US      │ 5650 FRONTIER-FRTR                   │ ban:1     │ 2026-10-21T17:54:09Z │ crowdsec │
+│ 8769 │ Ip:185.55.7.171    │ crowdsecurity/http-sensitive-files     │ US      │ 5650 FRONTIER-FRTR                   │ ban:1     │ 2026-10-21T17:54:06Z │ crowdsec │
+│ 8768 │ Ip:45.138.12.10    │ crowdsecurity/http-probing             │ LT      │                                      │ ban:1     │ 2026-10-21T17:35:12Z │ crowdsec │
+│ 8766 │ Ip:45.138.12.178   │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T16:30:16Z │ crowdsec │
+│ 8765 │ Ip:35.236.198.77   │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T16:06:34Z │ crowdsec │
+│ 8764 │ Ip:103.87.68.150   │ crowdsecurity/http-technology-probing  │ ID      │ 150249 PT Atharva Telematika Persada │           │ 2026-10-21T16:06:21Z │ crowdsec │
+│ 8763 │ Ip:45.138.12.68    │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T15:49:35Z │ crowdsec │
+│ 8762 │ Ip:45.138.12.68    │ crowdsecurity/http-probing             │ LT      │                                      │ ban:1     │ 2026-10-21T15:49:33Z │ crowdsec │
+│ 8761 │ Ip:45.138.12.68    │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T15:36:39Z │ crowdsec │
+│ 8760 │ Ip:103.87.68.150   │ crowdsecurity/http-technology-probing  │ ID      │ 150249 PT Atharva Telematika Persada │           │ 2026-10-21T15:10:44Z │ crowdsec │
+│ 8759 │ Ip:157.85.210.73   │ crowdsecurity/http-wordpress_user-enum │ ID      │ 139994 PT XL Axiata Tbk              │ ban:1     │ 2026-10-21T15:06:06Z │ crowdsec │
+│ 8758 │ Ip:136.111.7.237   │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T14:59:40Z │ crowdsec │
+│ 8757 │ Ip:34.21.31.230    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T14:52:12Z │ crowdsec │
+│ 8755 │ Ip:45.138.12.68    │ crowdsecurity/http-sensitive-files     │ LT      │                                      │ ban:1     │ 2026-10-21T14:26:28Z │ crowdsec │
+│ 8754 │ Ip:160.187.211.233 │ crowdsecurity/http-cve-probing         │ MY      │ 206216 Advin Services LLC            │ ban:1     │ 2026-10-21T13:58:08Z │ crowdsec │
+│ 8753 │ Ip:35.245.125.145  │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T13:27:32Z │ crowdsec │
+│ 8752 │ Ip:34.75.203.24    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T13:24:01Z │ crowdsec │
+│ 8751 │ Ip:34.11.105.85    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T13:15:33Z │ crowdsec │
+│ 8750 │ Ip:34.48.129.24    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T12:54:28Z │ crowdsec │
+│ 8749 │ Ip:34.156.226.144  │ crowdsecurity/http-bad-user-agent      │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T12:51:19Z │ crowdsec │
+│ 8747 │ Ip:68.183.172.177  │ crowdsecurity/http-cve-probing         │ US      │ 14061 DIGITALOCEAN-ASN               │ ban:1     │ 2026-10-21T11:38:55Z │ crowdsec │
+│ 8746 │ Ip:34.42.82.76     │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T11:28:41Z │ crowdsec │
+│ 8745 │ Ip:34.16.27.224    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T10:53:59Z │ crowdsec │
+│ 8744 │ Ip:34.172.168.96   │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T10:47:00Z │ crowdsec │
+│ 8743 │ Ip:34.55.62.217    │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T10:40:30Z │ crowdsec │
+│ 8742 │ Ip:5.253.84.92     │ crowdsecurity/http-cve-probing         │ US      │ 213438 ColocaTel Inc.                │ ban:1     │ 2026-10-21T10:39:56Z │ crowdsec │
+│ 8740 │ Ip:34.150.219.198  │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T10:28:24Z │ crowdsec │
+│ 8739 │ Ip:34.41.207.100   │ crowdsecurity/http-probing             │ US      │ 396982 GOOGLE-CLOUD-PLATFORM         │ ban:1     │ 2026-10-21T10:04:08Z │ crowdsec │
+│ 8738 │ Ip:84.233.212.24   │ crowdsecurity/http-sensitive-files     │ US      │ 212238 Datacamp Limited              │ ban:1     │ 2026-10-21T09:43:10Z │ crowdsec │
+╰──────┴────────────────────┴────────────────────────────────────────┴─────────┴──────────────────────────────────────┴───────────┴──────────────────────┴──────────╯
+reserveproxy@proxyunmus:~$ sudo docker exec -it crowdsec cscli alerts inspect 8794
+
+################################################################################################
+
+ - ID           : 8794
+ - Date         : 2026-10-21T23:05:48Z
+ - Machine      : localhost
+ - Simulation   : false
+ - Remediation  : true
+ - Kind         : crowdsec
+ - Reason       : crowdsecurity/http-sensitive-files
+ - Events Count : 5
+ - Scope:Value  : Ip:13.232.180.98
+ - Country      : IN
+ - AS           : AMAZON-02
+ - Begin        : 2026-10-21T23:05:45Z
+ - End          : 2026-10-21T23:05:47Z
+ - UUID         : ee7600c3-8eb3-441c-8968-2379601bd80c
+
+╭──────────────────────────────────────────────────────────────────────────╮
+│ Active Decisions                                                         │
+├──────────┬──────────────────┬────────┬────────────┬──────────────────────┤
+│    ID    │    scope:value   │ action │ expiration │      created_at      │
+├──────────┼──────────────────┼────────┼────────────┼──────────────────────┤
+│ 17482070 │ Ip:13.232.180.98 │ ban    │ 23h43m24s  │ 2026-10-21T23:05:48Z │
+╰──────────┴──────────────────┴────────┴────────────┴──────────────────────╯
+
+ - Context  :
+╭────────────┬──────────────────────────────────────────────────────────────╮
+│     Key    │                             Value                            │
+├────────────┼──────────────────────────────────────────────────────────────┤
+│ method     │ GET                                                          │
+│ status     │ 444                                                          │
+│ target_uri │ /.env                                                        │
+│ target_uri │ /.env.local                                                  │
+│ target_uri │ /.env.staging                                                │
+│ target_uri │ /.env.development                                            │
+│ target_uri │ /.env.test                                                   │
+│ user_agent │ Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 │
+│            │ (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36           │
+╰────────────┴──────────────────────────────────────────────────────────────╯
+reserveproxy@proxyunmus:~$ grep -rn "server_name" ~/npm/data/nginx/proxy_host/
+/home/reserveproxy/npm/data/nginx/proxy_host/15.conf:14:  server_name ppg.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/8.conf.bak.2026-02-11_111624:22:    server_name feb.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/8.conf.bak.2026-02-11_103844:22:    server_name feb.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/18.conf:14:  server_name laporanfatek.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/14.conf:14:  server_name fkip.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/3.conf.bak.2026-02-04_110824:22:    server_name fatek.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/2.conf:14:  server_name monitoring.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/3.conf.bak.2026-02-04_110819:22:    server_name fatek.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/8.conf.bak.2026-02-11_111629:22:    server_name feb.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/16.conf:14:  server_name rpl.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/13.conf:14:  server_name fisip.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/12.conf:14:  server_name feb.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/3.conf.err:14:  server_name fatek.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/11.conf:14:  server_name faperta.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/1.conf:14:  server_name simlitabmas.unmus.ac.id;
+/home/reserveproxy/npm/data/nginx/proxy_host/17.conf:14:  server_name laporankasfatek.unmus.ac.id;
+reserveproxy@proxyunmus:~$ ls -lh ~/npm/logs/proxy-host-*_access.log
+ls: cannot access '/home/reserveproxy/npm/logs/proxy-host-*_access.log': No such file or directory
+reserveproxy@proxyunmus:~$ find ~/npm/ -type f -name "*.log" -exec ls -lh {} +
+find: ‘/home/reserveproxy/npm/data/npm/npmplus’: Permission denied
+find: ‘/home/reserveproxy/npm/data/npm/tls’: Permission denied
+find: ‘/home/reserveproxy/npm/data/npm/nginx/logs’: Permission denied
+find: ‘/home/reserveproxy/npm/data/npm/access’: Permission denied
+find: ‘/home/reserveproxy/npm/data_backup_14juli2026/data/npmplus’: Permission denied
+find: ‘/home/reserveproxy/npm/data_backup_14juli2026/data/tls’: Permission denied
+find: ‘/home/reserveproxy/npm/data_backup_14juli2026/data/access’: Permission denied
+find: ‘/home/reserveproxy/npm/vm_data/cache/metricName_tsid’: Permission denied
+find: ‘/home/reserveproxy/npm/vm_data/cache/metricID_tsid’: Permission denied
+find: ‘/home/reserveproxy/npm/vm_data/cache/rollupResult’: Permission denied
+find: ‘/home/reserveproxy/npm/vm_data/cache/metricID_metricName’: Permission denied
+-rwxr-xr-x 1 root         root             0 Jul 15 00:00 /home/reserveproxy/npm/backup_modsecurity/modsecurity/audit.log
+-rw-r--r-- 1 root         root          6.9M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/modsecurity/audit.log
+-rw-r--r-- 1 root         root           14M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/faperta.access.log
+-rw-r--r-- 1 root         root          1.2M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/faperta.error.log
+-rw-r--r-- 1 root         root           60M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fatek.access.log
+-rw-r--r-- 1 root         root          2.2M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fatek.error.log
+-rw-r--r-- 1 root         root           27M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/feb.access.log
+-rw-r--r-- 1 root         root          1.3M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/feb.error.log
+-rw-r--r-- 1 root         root          9.7M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fisip.access.log
+-rw-r--r-- 1 root         root         1023K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fisip.error.log
+-rw-r--r-- 1 root         root           21M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fkip.access.log
+-rw-r--r-- 1 root         root          838K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/fkip.error.log
+-rw-r--r-- 1 root         root           13M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/hukum.access.log
+-rw-r--r-- 1 root         root          1.7M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/hukum.error.log
+-rw-r--r-- 1 root         root           29K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/laporanfatek.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/laporanfatek.error.log
+-rw-r--r-- 1 root         root          332K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/laporankasfatek.access.log
+-rw-r--r-- 1 root         root          6.9K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/laporankasfatek.error.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/npm.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/npm.stream.access.log
+-rwxr-xr-x 1 root         root           11M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/fatek.access.log
+-rwxr-xr-x 1 root         root          309K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/fatek.error.log
+-rw-r--r-- 1 root         root          5.3M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/feb.access.log
+-rw-r--r-- 1 root         root          197K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/feb.error.log
+-rw-r--r-- 1 root         root          4.1M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/fkip.access.log
+-rw-r--r-- 1 root         root          187K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/fkip.error.log
+-rwxr-xr-x 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/npm.access.log
+-rwxr-xr-x 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/npm.stream.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/ppg.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/ppg.error.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/rpl.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/rpl.error.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/simlitabmas.access.log
+-rw-r--r-- 1 root         root             0 Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/old/simlitabmas.error.log
+-rw-r--r-- 1 root         root           83M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/ppg.access.log
+-rw-r--r-- 1 root         root          4.2M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/ppg.error.log
+-rw-r--r-- 1 root         root          859K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/rpl.access.log
+-rw-r--r-- 1 root         root          275K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/rpl.error.log
+-rw-r--r-- 1 root         root           14M Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/simlitabmas.access.log
+-rw-r--r-- 1 root         root          147K Jul 14 17:17 /home/reserveproxy/npm/data_backup_14juli2026/data/nginx/logs/simlitabmas.error.log
+-rw-rw-r-- 1 reserveproxy reserveproxy     0 Jul 19 14:47 /home/reserveproxy/npm/data/crowdsec/conf/test.log
+-rw-r--r-- 1 root         root             0 Jul 16 13:00 /home/reserveproxy/npm/data/logs/access.log
+-rw-r--r-- 1 root         root           25K Sep 11 14:37 /home/reserveproxy/npm/data/logs/CBT-access.log
+-rw-r--r-- 1 root         root             0 Jul 19 17:13 /home/reserveproxy/npm/data/logs/CBT-error.log
+-rw-r--r-- 1 root         root          894K Oct  3 16:32 /home/reserveproxy/npm/data/logs/DEVEL-ESDM-access.log
+-rw-r--r-- 1 root         root             0 Sep 11 15:07 /home/reserveproxy/npm/data/logs/DEVEL-ESDM-error.log
+-rw-r--r-- 1 root         root          433K Sep 29 16:14 /home/reserveproxy/npm/data/logs/DEVEL-ESPMI-access.log
+-rw-r--r-- 1 root         root             0 Sep 16 14:04 /home/reserveproxy/npm/data/logs/DEVEL-ESPMI-error.log
+-rw-r--r-- 1 root         root             0 Jul 16 13:00 /home/reserveproxy/npm/data/logs/error.log
+-rw-r--r-- 1 root         root           34M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FAPERTA-access.log
+-rw-r--r-- 1 root         root          159K Oct 22 04:58 /home/reserveproxy/npm/data/logs/FAPERTA-error.log
+-rw-r--r-- 1 root         root          4.5M Jul 20 18:18 /home/reserveproxy/npm/data/logs/FATEK-access.log
+-rw-r--r-- 1 root         root             0 Jul 19 17:50 /home/reserveproxy/npm/data/logs/FATEK-error.log
+-rw-r--r-- 1 root         root           45M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FEB-access.log
+-rw-r--r-- 1 root         root          158K Oct 22 06:14 /home/reserveproxy/npm/data/logs/FEB-error.log
+-rw-r--r-- 1 root         root           36M Oct 22 08:23 /home/reserveproxy/npm/data/logs/FISIP-access.log
+-rw-r--r-- 1 root         root          179K Oct 22 01:30 /home/reserveproxy/npm/data/logs/FISIP-error.log
+-rw-r--r-- 1 root         root           39M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FKIP-access.log
+-rw-r--r-- 1 root         root          157K Oct 22 02:54 /home/reserveproxy/npm/data/logs/FKIP-error.log
+-rw-r--r-- 1 root         root           31M Oct 22 08:24 /home/reserveproxy/npm/data/logs/HUKUM-access.log
+-rw-r--r-- 1 root         root          176K Oct 22 03:35 /home/reserveproxy/npm/data/logs/HUKUM-error.log
+-rw-r--r-- 1 root         root           45M Oct 22 08:23 /home/reserveproxy/npm/data/logs/informatika-access.log
+-rw-r--r-- 1 root         root         1021K Oct  8 08:16 /home/reserveproxy/npm/data/logs/informatika-error.log
+-rw-r--r-- 1 root         root           35M Oct 22 08:24 /home/reserveproxy/npm/data/logs/LAB-MANAGER-access.log
+-rw-r--r-- 1 root         root           294 Aug 17 19:39 /home/reserveproxy/npm/data/logs/LAB-MANAGER-error.log
+-rw-r--r-- 1 root         root           37M Oct 22 08:24 /home/reserveproxy/npm/data/logs/LAPORANFATEK-access.log
+-rw-r--r-- 1 root         root          604K Oct 22 05:31 /home/reserveproxy/npm/data/logs/LAPORANFATEK-error.log
+-rw-r--r-- 1 root         root           42M Oct 22 08:23 /home/reserveproxy/npm/data/logs/LAPORANKASFATEK-access.log
+-rw-r--r-- 1 root         root          678K Oct 22 02:35 /home/reserveproxy/npm/data/logs/LAPORANKASFATEK-error.log
+-rw-r--r-- 1 root         root           57M Oct 22 08:24 /home/reserveproxy/npm/data/logs/PPG-access.log
+-rw-r--r-- 1 root         root          130K Oct 22 08:05 /home/reserveproxy/npm/data/logs/PPG-error.log
+-rw-r--r-- 1 root         root           16K Jul 20 18:34 /home/reserveproxy/npm/data/logs/RPL-access.log
+-rw-r--r-- 1 root         root           542 Jul 20 02:09 /home/reserveproxy/npm/data/logs/RPL-error.log
+-rw-r--r-- 1 root         root           31M Oct 22 08:23 /home/reserveproxy/npm/data/logs/SIKLUS-access.log
+-rw-r--r-- 1 root         root          1.4M Oct 22 06:49 /home/reserveproxy/npm/data/logs/SIKLUS-error.log
+-rw-r--r-- 1 root         root           29M Oct 22 08:23 /home/reserveproxy/npm/data/logs/SIMLITABMAS-access.log
+-rw-r--r-- 1 root         root           13K Jul 18 22:42 /home/reserveproxy/npm/data/logs/SIMLITABMAS-error.log
+-rw-rw-r-- 1 reserveproxy reserveproxy     0 Jul 19 18:41 /home/reserveproxy/npm/data/logs/test-access.log
+-rw-r--r-- 1 root         root          728K Oct 22 07:52 /home/reserveproxy/npm/data/logs/TRACER-STUDY-access.log
+-rw-r--r-- 1 root         root           287 Oct 17 11:41 /home/reserveproxy/npm/data/logs/TRACER-STUDY-error.log
+-rw------- 1 reserveproxy reserveproxy  641K Jul 15 23:30 /home/reserveproxy/npm/data/nginx/logs/faperta.access.log
+-rw------- 1 reserveproxy reserveproxy   43K Jul 15 23:30 /home/reserveproxy/npm/data/nginx/logs/faperta.error.log
+-rw------- 1 reserveproxy reserveproxy   13M Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/fatek.access.log
+-rw------- 1 reserveproxy reserveproxy  497K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/fatek.error.log
+-rw------- 1 reserveproxy reserveproxy  7.7M Jul 15 23:38 /home/reserveproxy/npm/data/nginx/logs/feb.access.log
+-rw------- 1 reserveproxy reserveproxy  228K Jul 15 23:38 /home/reserveproxy/npm/data/nginx/logs/feb.error.log
+-rw------- 1 reserveproxy reserveproxy  466K Jul 15 23:26 /home/reserveproxy/npm/data/nginx/logs/fisip.access.log
+-rw------- 1 reserveproxy reserveproxy   22K Jul 15 23:26 /home/reserveproxy/npm/data/nginx/logs/fisip.error.log
+-rw------- 1 reserveproxy reserveproxy  6.6M Jul 15 23:39 /home/reserveproxy/npm/data/nginx/logs/fkip.access.log
+-rw------- 1 reserveproxy reserveproxy  160K Jul 15 23:26 /home/reserveproxy/npm/data/nginx/logs/fkip.error.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/npm.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/npm.stream.access.log
+-rw------- 1 reserveproxy reserveproxy   11M Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/fatek.access.log
+-rw------- 1 reserveproxy reserveproxy  309K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/fatek.error.log
+-rw------- 1 reserveproxy reserveproxy  5.3M Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/feb.access.log
+-rw------- 1 reserveproxy reserveproxy  197K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/feb.error.log
+-rw------- 1 reserveproxy reserveproxy  4.1M Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/fkip.access.log
+-rw------- 1 reserveproxy reserveproxy  187K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/fkip.error.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/npm.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/npm.stream.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/ppg.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/ppg.error.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/rpl.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/rpl.error.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/simlitabmas.access.log
+-rw------- 1 reserveproxy reserveproxy     0 Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/old/simlitabmas.error.log
+-rw------- 1 reserveproxy reserveproxy  8.5M Jul 15 23:35 /home/reserveproxy/npm/data/nginx/logs/ppg.access.log
+-rw------- 1 reserveproxy reserveproxy  151K Jul 15 23:29 /home/reserveproxy/npm/data/nginx/logs/ppg.error.log
+-rw------- 1 reserveproxy reserveproxy  147K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/rpl.access.log
+-rw------- 1 reserveproxy reserveproxy   16K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/rpl.error.log
+-rw------- 1 reserveproxy reserveproxy   14M Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/simlitabmas.access.log
+-rw------- 1 reserveproxy reserveproxy  147K Jul 14 19:07 /home/reserveproxy/npm/data/nginx/logs/simlitabmas.error.log
+-rw-rw-r-- 1 reserveproxy reserveproxy  1.7K Jul 19 15:02 /home/reserveproxy/npm/test-log.log
+reserveproxy@proxyunmus:~$ ls -lh ~/npm/data/logs/*-access.log
+-rw-r--r-- 1 root         root          25K Sep 11 14:37 /home/reserveproxy/npm/data/logs/CBT-access.log
+-rw-r--r-- 1 root         root         894K Oct  3 16:32 /home/reserveproxy/npm/data/logs/DEVEL-ESDM-access.log
+-rw-r--r-- 1 root         root         433K Sep 29 16:14 /home/reserveproxy/npm/data/logs/DEVEL-ESPMI-access.log
+-rw-r--r-- 1 root         root          34M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FAPERTA-access.log
+-rw-r--r-- 1 root         root         4.5M Jul 20 18:18 /home/reserveproxy/npm/data/logs/FATEK-access.log
+-rw-r--r-- 1 root         root          45M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FEB-access.log
+-rw-r--r-- 1 root         root          36M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FISIP-access.log
+-rw-r--r-- 1 root         root          39M Oct 22 08:24 /home/reserveproxy/npm/data/logs/FKIP-access.log
+-rw-r--r-- 1 root         root          31M Oct 22 08:24 /home/reserveproxy/npm/data/logs/HUKUM-access.log
+-rw-r--r-- 1 root         root          45M Oct 22 08:23 /home/reserveproxy/npm/data/logs/informatika-access.log
+-rw-r--r-- 1 root         root          35M Oct 22 08:24 /home/reserveproxy/npm/data/logs/LAB-MANAGER-access.log
+-rw-r--r-- 1 root         root          37M Oct 22 08:24 /home/reserveproxy/npm/data/logs/LAPORANFATEK-access.log
+-rw-r--r-- 1 root         root          42M Oct 22 08:24 /home/reserveproxy/npm/data/logs/LAPORANKASFATEK-access.log
+-rw-r--r-- 1 root         root          57M Oct 22 08:24 /home/reserveproxy/npm/data/logs/PPG-access.log
+-rw-r--r-- 1 root         root          16K Jul 20 18:34 /home/reserveproxy/npm/data/logs/RPL-access.log
+-rw-r--r-- 1 root         root          31M Oct 22 08:23 /home/reserveproxy/npm/data/logs/SIKLUS-access.log
+-rw-r--r-- 1 root         root          29M Oct 22 08:24 /home/reserveproxy/npm/data/logs/SIMLITABMAS-access.log
+-rw-rw-r-- 1 reserveproxy reserveproxy    0 Jul 19 18:41 /home/reserveproxy/npm/data/logs/test-access.log
+-rw-r--r-- 1 root         root         728K Oct 22 07:52 /home/reserveproxy/npm/data/logs/TRACER-STUDY-access.log
+reserveproxy@proxyunmus:~$ ls -1 ~/npm/data/logs/*-access.log | wc -l
+19
+reserveproxy@proxyunmus:~$ 
