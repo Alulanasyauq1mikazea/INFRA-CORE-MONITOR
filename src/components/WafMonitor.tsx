@@ -122,6 +122,19 @@ const normalizeLogFileName = (raw: string): string => {
 
 const getDomainInfo = (rawLogFileName: string) => {
   const cleanName = normalizeLogFileName(rawLogFileName);
+  const lower = cleanName.toLowerCase();
+
+  // If perimeter or edge, return perimeter metadata (NEVER generate a *.unmus.ac.id domain for it!)
+  if (lower.includes('perimeter') || lower.includes('edge') || lower.includes('all vhost')) {
+    return {
+      domain: 'Edge Perimeter (All VHosts)',
+      url: '',
+      desc: 'Firewall Router / Edge Perimeter WAF',
+      iconBg: 'bg-slate-700/40 text-slate-300 border-slate-600/30',
+      logFile: cleanName,
+      isPerimeter: true,
+    };
+  }
   
   // 1. Direct or case-insensitive match in dictionary
   const foundKey = Object.keys(LOG_TO_DOMAIN_MAP).find(
@@ -142,16 +155,16 @@ const getDomainInfo = (rawLogFileName: string) => {
     return { ...foundByDomain, logFile: cleanName };
   }
 
-  // 3. Fallback: sanitize into clean subdomain without any paths or symbols
+  // 3. Fallback: sanitize into clean subdomain or keep full domain if dot exists
   const baseName = cleanName
     .replace(/-access\.log$/i, '')
     .replace(/\.log$/i, '')
-    .replace(/[^a-zA-Z0-9-]/g, '-')
+    .replace(/[^a-zA-Z0-9.-]/g, '-')
     .replace(/-+/g, '-')
     .replace(/^-|-$/g, '')
     .toLowerCase();
 
-  const domain = `${baseName || 'portal'}.unmus.ac.id`;
+  const domain = baseName.includes('.') ? baseName : `${baseName || 'portal'}.unmus.ac.id`;
   return {
     domain,
     url: `https://${domain}`,
@@ -247,6 +260,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
 
   // Live Raw Logs Stream States
   const [rawLogViewMode, setRawLogViewMode] = useState<'analytics' | 'terminal' | 'inspector'>('analytics');
+  const [includePerimeterInVhostChart, setIncludePerimeterInVhostChart] = useState(false);
   const [rawLogSearch, setRawLogSearch] = useState<string>('');
   const [rawLogDomainFilter, setRawLogDomainFilter] = useState<string>('all');
 
@@ -525,17 +539,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.events)) {
-          setRawLogEvents(prev => {
-            if (prev.length === 0 && data.events.length === 0) return prev;
-            if (
-              prev.length === data.events.length &&
-              prev[0]?.id === data.events[0]?.id &&
-              prev[prev.length - 1]?.id === data.events[data.events.length - 1]?.id
-            ) {
-              return prev;
-            }
-            return data.events;
-          });
+          setRawLogEvents(data.events);
         }
         setLapiDiag(prev => {
           if (
@@ -597,28 +601,8 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
     engineLatencyMs: 0.38,
   });
 
-  // Target logs distribution (19 VirtualHost Subdomain Real dari Nginx Proxy Manager Server 192.168.77.77)
-  const [facultyLogs, setFacultyLogs] = useState<Record<string, number>>({
-    'PPG-access.log': 58240,
-    'FEB-access.log': 46120,
-    'informatika-access.log': 45890,
-    'LAPORANKASFATEK-access.log': 42310,
-    'FKIP-access.log': 39450,
-    'LAPORANFATEK-access.log': 37200,
-    'FISIP-access.log': 36150,
-    'LAB-MANAGER-access.log': 35420,
-    'FAPERTA-access.log': 34800,
-    'HUKUM-access.log': 31600,
-    'SIKLUS-access.log': 31240,
-    'SIMLITABMAS-access.log': 29810,
-    'FATEK-access.log': 11450,
-    'DEVEL-ESDM-access.log': 4280,
-    'TRACER-STUDY-access.log': 3650,
-    'DEVEL-ESPMI-access.log': 2190,
-    'CBT-access.log': 640,
-    'RPL-access.log': 410,
-    'test-access.log': 0,
-  });
+  // Target logs distribution (Dynamic live scrape from Prometheus Host 192.168.77.77:6060)
+  const [facultyLogs, setFacultyLogs] = useState<Record<string, number>>({});
 
   // Specific Attack Breakdown mapped to each Subdomain/VHost Log
   const [selectedDomainFilter, setSelectedDomainFilter] = useState<string>('all');
@@ -626,10 +610,17 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
   const [domainMatrixViewMode, setDomainMatrixViewMode] = useState<'charts' | 'table' | 'grid' | 'compact'>('charts');
   const [realDomainAlertStats, setRealDomainAlertStats] = useState<Record<string, any>>({});
 
-  // Dynamic Subdomains extractor (synced with real logs & metrics, 19 virtual hosts)
   // Dynamic Subdomains extractor (strictly synced with active server logs & metrics)
   const availableSubdomains = useMemo(() => {
     const list = new Set<string>();
+
+    const isCampusSubdomain = (dom: string) => {
+      const lower = (dom || '').toLowerCase().trim();
+      if (!lower) return false;
+      if (lower.includes('perimeter') || lower.includes('edge') || lower.includes('all vhost')) return false;
+      if (lower === 'localhost' || lower.startsWith('127.') || lower.startsWith('192.168.')) return false;
+      return lower.includes('.');
+    };
 
     const hasLiveMetrics = facultyLogs && Object.keys(facultyLogs).length > 0;
     const hasLiveAlerts = realDomainAlertStats && Object.keys(realDomainAlertStats).length > 0;
@@ -639,7 +630,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
     if (hasLiveMetrics) {
       Object.keys(facultyLogs || {}).forEach(k => {
         const d = getDomainInfo(k).domain;
-        if (d && d !== "unmus.ac.id" && d.endsWith(".unmus.ac.id")) {
+        if (isCampusSubdomain(d)) {
           list.add(d);
         }
       });
@@ -648,7 +639,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
     if (hasLiveAlerts) {
       Object.keys(realDomainAlertStats || {}).forEach(k => {
         const d = getDomainInfo(k).domain;
-        if (d && d !== "unmus.ac.id" && d.endsWith(".unmus.ac.id")) {
+        if (isCampusSubdomain(d)) {
           list.add(d);
         }
       });
@@ -656,7 +647,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
 
     if (hasLiveRawLogs) {
       (rawLogEvents || []).forEach(e => {
-        if (e.vhost && e.vhost !== "unmus.ac.id" && e.vhost.endsWith(".unmus.ac.id")) {
+        if (isCampusSubdomain(e.vhost)) {
           list.add(e.vhost);
         }
       });
@@ -693,7 +684,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
     list.delete('pmb.unmus.ac.id');
     list.delete('elearning.unmus.ac.id');
 
-    return Array.from(list).sort();
+    return Array.from(list).filter(isCampusSubdomain).sort();
   }, [facultyLogs, realDomainAlertStats, rawLogEvents]);
 
   // Synchronized subdomain attack metrics (calculated dynamically from live metrics & logs)
@@ -777,78 +768,21 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
   const [threatTableSubTab, setThreatTableSubTab] = useState<'ips' | 'uris'>('ips');
   const [threatSearchTerm, setThreatSearchTerm] = useState<string>('');
   const [copiedThreatText, setCopiedThreatText] = useState<string | null>(null);
-  const [topWeeklyAttackingIps, setTopWeeklyAttackingIps] = useState<any[]>([
-    {
-      ip: '45.148.10.140',
-      asName: 'Techoff Srv Limited',
-      country: 'NL',
-      countryName: 'Netherlands',
-      flag: '🇳🇱',
-      totalAlerts: 18,
-      totalEvents: 640,
-      lastSeen: '2026-08-20T22:45:00Z',
-      topScenario: 'http-wordpress_wpconfig',
-      targetedDomains: ['informatika.unmus.ac.id', 'ppg.unmus.ac.id'],
-      remediated: true,
-    },
-    {
-      ip: '45.148.10.62',
-      asName: 'Techoff Srv Limited',
-      country: 'NL',
-      countryName: 'Netherlands',
-      flag: '🇳🇱',
-      totalAlerts: 12,
-      totalEvents: 420,
-      lastSeen: '2026-08-20T21:40:00Z',
-      topScenario: 'http-sensitive-files',
-      targetedDomains: ['informatika.unmus.ac.id'],
-      remediated: true,
-    },
-    {
-      ip: '103.250.15.222',
-      asName: 'PT Pandawa Global Telematika',
-      country: 'ID',
-      countryName: 'Indonesia',
-      flag: '🇮🇩',
-      totalAlerts: 8,
-      totalEvents: 280,
-      lastSeen: '2026-08-20T20:15:00Z',
-      topScenario: 'http-sensitive-files',
-      targetedDomains: ['feb.unmus.ac.id', 'unmus.ac.id'],
-      remediated: true,
-    },
-    {
-      ip: '165.22.179.40',
-      asName: 'DIGITALOCEAN-ASN',
-      country: 'US',
-      countryName: 'United States',
-      flag: '🇺🇸',
-      totalAlerts: 6,
-      totalEvents: 145,
-      lastSeen: '2026-08-20T19:10:00Z',
-      topScenario: 'http-cve-probing',
-      targetedDomains: ['ppg.unmus.ac.id'],
-      remediated: true,
-    },
-    {
-      ip: '194.169.175.43',
-      asName: 'Scalaxy B.V.',
-      country: 'RU',
-      countryName: 'Russia',
-      flag: '🇷🇺',
-      totalAlerts: 5,
-      totalEvents: 110,
-      lastSeen: '2026-08-20T18:05:00Z',
-      topScenario: 'http-bad-user-agent',
-      targetedDomains: ['fkip.unmus.ac.id'],
-      remediated: true,
-    },
-  ]);
+  const [topWeeklyAttackingIps, setTopWeeklyAttackingIps] = useState<any[]>([]);
 
   // Dominant origin country dynamically computed from real threat actor dataset
   const dominantThreatCountry = useMemo(() => {
+    if (!topWeeklyAttackingIps || topWeeklyAttackingIps.length === 0) {
+      return {
+        code: 'ID',
+        name: 'Indonesia',
+        flag: '🇮🇩',
+        hits: 0,
+        label: 'Tidak ada data serangan'
+      };
+    }
     const countryCounts: Record<string, { hits: number; name: string; flag: string; code: string }> = {};
-    (topWeeklyAttackingIps || []).forEach((item: any) => {
+    topWeeklyAttackingIps.forEach((item: any) => {
       const canonical = getCanonicalCountryInfo(item.country, item.flag, item.countryName);
       const c = canonical.code;
       if (!countryCounts[c]) {
@@ -874,45 +808,14 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
       };
     }
     return {
-      code: 'US',
-      name: 'United States',
-      flag: '🇺🇸',
-      hits: 211,
-      label: '🇺🇸 United States (US)'
+      code: 'ID',
+      name: 'Indonesia',
+      flag: '🇮🇩',
+      hits: 0,
+      label: 'Tidak ada data serangan'
     };
   }, [topWeeklyAttackingIps]);
-  const [topWeeklyTargetedUris, setTopWeeklyTargetedUris] = useState<any[]>([
-    {
-      uri: '/.env',
-      hits: 680,
-      targetedDomains: ['informatika.unmus.ac.id', 'feb.unmus.ac.id'],
-      topScenario: 'http-sensitive-files',
-    },
-    {
-      uri: '/wp-config.php',
-      hits: 510,
-      targetedDomains: ['informatika.unmus.ac.id'],
-      topScenario: 'http-wordpress_wpconfig',
-    },
-    {
-      uri: '/eval-stdin.php',
-      hits: 390,
-      targetedDomains: ['feb.unmus.ac.id'],
-      topScenario: 'http-backdoors-attempts',
-    },
-    {
-      uri: '/shell.php',
-      hits: 260,
-      targetedDomains: ['informatika.unmus.ac.id', 'ppg.unmus.ac.id'],
-      topScenario: 'http-backdoors-attempts',
-    },
-    {
-      uri: '/.git/config',
-      hits: 180,
-      targetedDomains: ['fkip.unmus.ac.id'],
-      topScenario: 'http-sensitive-files',
-    },
-  ]);
+  const [topWeeklyTargetedUris, setTopWeeklyTargetedUris] = useState<any[]>([]);
   const [selectedDomainDetail, setSelectedDomainDetail] = useState<any | null>(null);
   const [showIngestAlertsModal, setShowIngestAlertsModal] = useState(false);
   const [rawAlertsInput, setRawAlertsInput] = useState('');
@@ -3165,7 +3068,9 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
 
             {/* Horizontal Scrollable / Compact Grid of Subdomain Threat Cards */}
             <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6 gap-2 pt-1">
-              {availableSubdomains.map((subdomain) => {
+              {availableSubdomains
+                .filter(s => !s.toLowerCase().includes('perimeter') && !s.toLowerCase().includes('edge'))
+                .map((subdomain) => {
                 const logsForDomain = rawLogEvents.filter(e => e.vhost.toLowerCase().includes(subdomain.toLowerCase()));
                 const hitsCount = logsForDomain.length;
                 const isSelected = rawLogDomainFilter.toLowerCase() === subdomain.toLowerCase();
@@ -3244,25 +3149,56 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                     <h3 className="text-sm md:text-base font-bold text-slate-100 tracking-tight">
                       Live RAW Logs & Stream
                     </h3>
-                    <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
-                      <span className={`w-1.5 h-1.5 rounded-full ${isRawStreaming ? 'bg-emerald-400 animate-ping' : 'bg-amber-400'}`}></span>
-                      {isRawStreaming ? 'Live Stream' : 'Paused'}
-                    </span>
-                    <span className="hidden md:inline px-1.5 py-0.2 rounded-md text-[10px] font-mono bg-emerald-950/80 text-emerald-300 border border-emerald-800/60 font-semibold">
-                      Khusus LAPI + Nginx Access Log
-                    </span>
-                    <span className="hidden xl:inline px-1.5 py-0.2 rounded-md text-[10px] font-mono bg-slate-950 text-slate-400 border border-slate-800">
-                      CAPI Global Blocklist Dipisahkan ke Tab 3
+                    {lapiDiag?.lapiConnected && rawLogEvents.length > 0 ? (
+                      <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className={`w-1.5 h-1.5 rounded-full ${isRawStreaming ? 'bg-emerald-400 animate-ping' : 'bg-emerald-500'}`}></span>
+                        {isRawStreaming ? '🟢 Real Live LAPI Stream' : 'Live (Paused)'}
+                      </span>
+                    ) : lapiDiag?.lapiConnected && rawLogEvents.length === 0 ? (
+                      <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
+                        🟢 LAPI Online (0 Log Serangan)
+                      </span>
+                    ) : lapiDiag?.source === 'user_imported_alerts' ? (
+                      <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        📁 User Imported JSON ({rawLogEvents.length} Logs)
+                      </span>
+                    ) : (
+                      <span className="flex items-center gap-1 px-1.5 py-0.2 rounded-md text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">
+                        🔴 LAPI Offline (0 Log - Bersih Tanpa Simulasi)
+                      </span>
+                    )}
+
+                    <span className="hidden md:inline px-1.5 py-0.2 rounded-md text-[10px] font-mono bg-slate-950 text-slate-400 border border-slate-800">
+                      {lapiDiag?.lapiConnected ? 'Direct Local LAPI + Nginx' : `Target: ${lapiDiag?.targetLapiUrl || '192.168.77.77:8181'}`}
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-400 mt-0.5 truncate hidden sm:block">
-                    Aliran log transaksi nyata dari Nginx Proxy Manager & insiden lokal CrowdSec LAPI (100% bebas dari tebakan CAPI)
+                    {lapiDiag?.lapiConnected
+                      ? 'Aliran log transaksi nyata dari Nginx Proxy Manager & insiden lokal CrowdSec LAPI seketika'
+                      : 'Koneksi ke IP lokal 192.168.77.77:8181 timeout dari cloud container. Seluruh data simulasi telah dihapus (100% data riil).'}
                   </p>
                 </div>
               </div>
 
               {/* Compact Action Buttons */}
               <div className="flex items-center gap-1.5 flex-wrap">
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await fetch('/api/system/clean-dummy-data', { method: 'POST' });
+                      fetchLiveRawLogs();
+                      fetchCrowdSecAlerts();
+                    } catch {}
+                  }}
+                  className="px-2.5 py-1 rounded-lg text-xs font-semibold flex items-center gap-1.5 transition border bg-rose-500/10 text-rose-300 border-rose-500/30 hover:bg-rose-500/20"
+                  title="Pastikan seluruh data simulasi bersih dari sistem"
+                >
+                  <Trash2 className="w-3 h-3 text-rose-400" />
+                  <span>Bersihkan Dummy</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => setIsRawStreaming(!isRawStreaming)}
@@ -3737,11 +3673,11 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                       {rawLogEvents.length === 0 && (
                         <button
                           type="button"
-                          onClick={() => fetchLiveRawLogs(true)}
+                          onClick={() => setShowIngestAlertsModal(true)}
                           className="px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 text-white rounded-lg font-semibold flex items-center gap-1.5 transition shadow"
                         >
-                          <Play className="w-3.5 h-3.5" />
-                          <span>Muat Log Demo Baseline</span>
+                          <Upload className="w-3.5 h-3.5" />
+                          <span>Import Log Riil JSON</span>
                         </button>
                       )}
                     </div>
@@ -3757,14 +3693,14 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                     return (
                       <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-8 text-center space-y-4 shadow-xl">
                         <div className="w-12 h-12 rounded-2xl bg-slate-800 text-slate-400 flex items-center justify-center mx-auto border border-slate-700">
-                          <BarChart3 className="w-6 h-6 text-emerald-400" />
+                          <ShieldAlert className="w-6 h-6 text-cyan-400" />
                         </div>
                         <div className="max-w-md mx-auto space-y-1.5">
-                          <h4 className="text-sm font-bold text-slate-200">Grafik Forensik Sedang Menunggu Data Log</h4>
+                          <h4 className="text-sm font-bold text-slate-200">Data Simulasi Telah Dihapus (Mode Riil 100%)</h4>
                           <p className="text-xs text-slate-400 leading-relaxed">
                             {lapiDiag?.lapiConnected
-                              ? 'LAPI CrowdSec telah terhubung normal, namun belum ada rekaman serangan yang cocok dengan kriteria filter saat ini.'
-                              : 'Koneksi ke CrowdSec LAPI port 8080 belum terhubung atau Bouncer API Key belum dimasukkan.'}
+                              ? 'LAPI CrowdSec telah terhubung normal, namun belum ada rekaman insiden serangan baru di server.'
+                              : 'Koneksi ke CrowdSec LAPI on-premise (192.168.77.77:8181) belum terhubung dari cloud container. Seluruh data dummy/simulasi telah dibersihkan.'}
                           </p>
                         </div>
                         <div className="flex items-center justify-center gap-2 pt-1 flex-wrap">
@@ -3778,11 +3714,11 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                           </button>
                           <button
                             type="button"
-                            onClick={() => fetchLiveRawLogs(true)}
-                            className="px-3.5 py-2 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-xl text-xs font-semibold flex items-center gap-1.5 transition"
+                            onClick={() => setShowIngestAlertsModal(true)}
+                            className="px-3.5 py-2 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl text-xs font-semibold flex items-center gap-1.5 transition shadow"
                           >
-                            <Play className="w-3.5 h-3.5 text-emerald-400" />
-                            <span>Muat Log Baseline Demo</span>
+                            <Upload className="w-3.5 h-3.5" />
+                            <span>Import Log Riil JSON (cscli alerts list)</span>
                           </button>
                         </div>
                       </div>
@@ -3827,109 +3763,160 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                     timelineCounts[timeBucket] = (timelineCounts[timeBucket] || 0) + 1;
                   });
 
-                  // Top Target VHosts Data
-                  const vhostChartData = Object.entries(vhostCounts)
-                    .map(([name, count]) => ({ name, count }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 7);
+                    // Separate Edge Perimeter from real University VirtualHosts
+                    const isPerimeterHost = (name: string) =>
+                      name.toLowerCase().includes('perimeter') ||
+                      name.toLowerCase().includes('edge') ||
+                      name.toLowerCase().includes('all vhosts');
 
-                  // Top Scenarios Data
-                  const scenarioChartData = Object.entries(scenarioCounts)
-                    .map(([name, value]) => ({
-                      name: name.replace(/^crowdsecurity\//, '').replace(/-/g, ' '),
-                      fullName: name,
-                      value
-                    }))
-                    .sort((a, b) => b.value - a.value)
-                    .slice(0, 6);
+                    const perimeterCount = Object.entries(vhostCounts)
+                      .filter(([name]) => isPerimeterHost(name))
+                      .reduce((acc, [, c]) => acc + c, 0);
 
-                  // Top Countries Data
-                  const countryChartData = Object.entries(countryCounts)
-                    .map(([code, item]) => ({
-                      displayName: item.countryName || code,
-                      countryName: item.countryName || code,
-                      code,
-                      flag: item.flag || '🌐',
-                      count: item.count
-                    }))
-                    .sort((a, b) => b.count - a.count)
-                    .slice(0, 6);
+                    const campusVhostData = Object.entries(vhostCounts)
+                      .filter(([name]) => !isPerimeterHost(name))
+                      .map(([name, count]) => ({ name, count }))
+                      .sort((a, b) => b.count - a.count);
 
-                  // HTTP Status Distribution Data
-                  const statusColors: Record<string, string> = {
-                    '403': '#f43f5e', // Rose
-                    '429': '#a855f7', // Purple
-                    '404': '#f59e0b', // Amber
-                    '444': '#10b981', // Emerald
-                    '200': '#06b6d4', // Cyan
-                    '301': '#3b82f6', // Blue
-                  };
-                  const statusChartData = Object.entries(statusCounts).map(([status, count]) => ({
-                    name: `HTTP ${status}`,
-                    count,
-                    color: statusColors[status] || '#64748b'
-                  }));
+                    const allVhostData = Object.entries(vhostCounts)
+                      .map(([name, count]) => ({ name, count }))
+                      .sort((a, b) => b.count - a.count);
 
-                  // Threat Severity Distribution
-                  const criticalCount = filteredLogs.filter(l => l.riskLevel === 'CRITICAL').length;
-                  const highCount = filteredLogs.filter(l => l.riskLevel === 'HIGH').length;
-                  const medCount = filteredLogs.filter(l => l.riskLevel === 'MEDIUM' || !l.riskLevel).length;
+                    // Default: Show campus subdomains so the administrator sees real academic services under attack
+                    const activeVhostList = (includePerimeterInVhostChart || campusVhostData.length === 0)
+                      ? allVhostData
+                      : campusVhostData;
 
-                  const SCENARIO_COLORS = ['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4'];
+                    const vhostChartData = activeVhostList.slice(0, 7);
 
-                  return (
-                    <div className="space-y-4 font-sans">
-                      {/* Top Metric Highlights Cards */}
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
-                          <span className="text-slate-400 text-xs font-semibold block">Total Serangan Terdeteksi</span>
-                          <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">{filteredLogs.length}</div>
-                          <span className="text-[11px] text-slate-500">Dalam rentang log aktif</span>
-                        </div>
+                    // Top Real Campus Target VHost
+                    const topTargetVhost = campusVhostData[0] || allVhostData[0];
 
-                        <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
-                          <span className="text-slate-400 text-xs font-semibold block">VHost Target Utama</span>
-                          <div className="text-lg font-bold font-mono text-cyan-300 mt-1 truncate">
-                            {vhostChartData[0]?.name || 'N/A'}
+                    // Top Scenarios Data
+                    const scenarioChartData = Object.entries(scenarioCounts)
+                      .map(([name, value]) => ({
+                        name: name.replace(/^crowdsecurity\//, '').replace(/-/g, ' '),
+                        fullName: name,
+                        value
+                      }))
+                      .sort((a, b) => b.value - a.value)
+                      .slice(0, 6);
+
+                    // Top Countries Data
+                    const countryChartData = Object.entries(countryCounts)
+                      .map(([code, item]) => ({
+                        displayName: item.countryName || code,
+                        countryName: item.countryName || code,
+                        code,
+                        flag: item.flag || '🌐',
+                        count: item.count
+                      }))
+                      .sort((a, b) => b.count - a.count)
+                      .slice(0, 6);
+
+                    // HTTP Status Distribution Data
+                    const statusColors: Record<string, string> = {
+                      '403': '#f43f5e', // Rose
+                      '429': '#a855f7', // Purple
+                      '404': '#f59e0b', // Amber
+                      '444': '#10b981', // Emerald
+                      '200': '#06b6d4', // Cyan
+                      '301': '#3b82f6', // Blue
+                    };
+                    const statusChartData = Object.entries(statusCounts).map(([status, count]) => ({
+                      name: `HTTP ${status}`,
+                      count,
+                      color: statusColors[status] || '#64748b'
+                    }));
+
+                    // Threat Severity Distribution
+                    const criticalCount = filteredLogs.filter(l => l.riskLevel === 'CRITICAL').length;
+                    const highCount = filteredLogs.filter(l => l.riskLevel === 'HIGH').length;
+                    const medCount = filteredLogs.filter(l => l.riskLevel === 'MEDIUM' || !l.riskLevel).length;
+
+                    const SCENARIO_COLORS = ['#ec4899', '#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#06b6d4'];
+
+                    return (
+                      <div className="space-y-4 font-sans">
+                        {/* Top Metric Highlights Cards */}
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                          <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                            <span className="text-slate-400 text-xs font-semibold block">Total Serangan Terdeteksi</span>
+                            <div className="text-2xl font-bold font-mono text-emerald-400 mt-1">{filteredLogs.length}</div>
+                            <span className="text-[11px] text-slate-500">Dalam rentang log aktif</span>
                           </div>
-                          <span className="text-[11px] text-slate-500">{vhostChartData[0]?.count || 0} Percobaan Serangan</span>
-                        </div>
 
-                        <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
-                          <span className="text-slate-400 text-xs font-semibold block">Skenario Dominan</span>
-                          <div className="text-lg font-bold font-mono text-purple-300 mt-1 truncate" title={scenarioChartData[0]?.fullName}>
-                            {scenarioChartData[0]?.name || 'N/A'}
-                          </div>
-                          <span className="text-[11px] text-slate-500">{scenarioChartData[0]?.value || 0} Insiden Dideteksi</span>
-                        </div>
-
-                        <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
-                          <span className="text-slate-400 text-xs font-semibold block">Asal Negara Terbanyak</span>
-                          <div className="text-sm sm:text-base font-bold font-mono text-amber-300 mt-1 truncate flex items-center gap-1.5">
-                            {countryChartData[0] ? (
-                              <>
-                                <CountryFlag countryCode={countryChartData[0].code} flagEmoji={countryChartData[0].flag} size="sm" />
-                                <span className="truncate">{countryChartData[0].countryName}</span>
-                              </>
-                            ) : 'N/A'}
-                          </div>
-                          <span className="text-[11px] text-slate-500">{countryChartData[0]?.count || 0} Attacker IP</span>
-                        </div>
-                      </div>
-
-                      {/* Charts Grid */}
-                      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        {/* Chart 1: Target VirtualHost Distribution */}
-                        <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl space-y-3">
-                          <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                              <Server className="w-4 h-4 text-cyan-400" />
-                              <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
-                                Top VirtualHost Target Serangan
-                              </h4>
+                          <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                            <span className="text-slate-400 text-xs font-semibold block">VHost Target Utama</span>
+                            <div className="text-lg font-bold font-mono text-cyan-300 mt-1 truncate" title={topTargetVhost?.name || 'N/A'}>
+                              {topTargetVhost?.name || 'N/A'}
                             </div>
-                            <span className="text-[11px] text-slate-400 font-mono">Top {vhostChartData.length} Host</span>
+                            <div className="text-[11px] text-slate-500 flex items-center justify-between gap-1 mt-0.5">
+                              <span>{topTargetVhost?.count || 0} Percobaan Serangan</span>
+                              {perimeterCount > 0 && (
+                                <span className="text-[10px] font-mono text-cyan-400 bg-cyan-950/60 px-1.5 py-0.2 rounded border border-cyan-800/40" title={`${perimeterCount} serangan diblokir preventif di Edge Perimeter Router`}>
+                                  +{perimeterCount} Perimeter
+                                </span>
+                              )}
+                            </div>
                           </div>
+
+                          <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                            <span className="text-slate-400 text-xs font-semibold block">Skenario Dominan</span>
+                            <div className="text-lg font-bold font-mono text-purple-300 mt-1 truncate" title={scenarioChartData[0]?.fullName}>
+                              {scenarioChartData[0]?.name || 'N/A'}
+                            </div>
+                            <span className="text-[11px] text-slate-500">{scenarioChartData[0]?.value || 0} Insiden Dideteksi</span>
+                          </div>
+
+                          <div className="bg-slate-900/90 border border-slate-800 p-3.5 rounded-2xl">
+                            <span className="text-slate-400 text-xs font-semibold block">Asal Negara Terbanyak</span>
+                            <div className="text-sm sm:text-base font-bold font-mono text-amber-300 mt-1 truncate flex items-center gap-1.5">
+                              {countryChartData[0] ? (
+                                <>
+                                  <CountryFlag countryCode={countryChartData[0].code} flagEmoji={countryChartData[0].flag} size="sm" />
+                                  <span className="truncate">{countryChartData[0].countryName}</span>
+                                </>
+                              ) : 'N/A'}
+                            </div>
+                            <span className="text-[11px] text-slate-500">{countryChartData[0]?.count || 0} Attacker IP</span>
+                          </div>
+                        </div>
+
+                        {/* Charts Grid */}
+                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                          {/* Chart 1: Target VirtualHost Distribution */}
+                          <div className="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl space-y-3">
+                            <div className="flex items-center justify-between flex-wrap gap-2">
+                              <div className="flex items-center gap-2">
+                                <Server className="w-4 h-4 text-cyan-400" />
+                                <h4 className="text-xs font-bold text-slate-200 uppercase tracking-wider">
+                                  Top VirtualHost Target Serangan
+                                </h4>
+                              </div>
+                              <div className="flex items-center gap-1.5">
+                                <button
+                                  type="button"
+                                  onClick={() => setIncludePerimeterInVhostChart(prev => !prev)}
+                                  className={`px-2 py-0.5 rounded text-[10px] font-mono font-semibold transition border flex items-center gap-1 ${
+                                    includePerimeterInVhostChart
+                                      ? 'bg-cyan-500/20 text-cyan-300 border-cyan-500/40'
+                                      : 'bg-slate-950 text-slate-400 border-slate-800 hover:text-slate-200'
+                                  }`}
+                                  title="Klik untuk beralih antara Subdomain Kampus saja atau menyertakan Edge Perimeter"
+                                >
+                                  <span>{includePerimeterInVhostChart ? '🛡️ Termasuk Perimeter' : '🏢 Subdomain Saja'}</span>
+                                  {perimeterCount > 0 && !includePerimeterInVhostChart && (
+                                    <span className="text-[9px] bg-cyan-950 px-1 py-0.2 rounded text-cyan-400 font-bold">
+                                      +{perimeterCount}
+                                    </span>
+                                  )}
+                                </button>
+                                <span className="text-[11px] text-slate-400 font-mono">
+                                  Top {vhostChartData.length} Host
+                                </span>
+                              </div>
+                            </div>
 
                           <div className="h-64 w-full">
                             <ResponsiveContainer width="100%" height="100%">

@@ -45,7 +45,7 @@
   "crowdsec": {
     "enabled": true,
     "exporterEndpoint": "http://192.168.77.77:6060/metrics",
-    "lapiEndpoint": "http://192.168.77.77:8080",
+    "lapiEndpoint": "http://192.168.77.77:8181",
     "apiKey": "GF+BGfUFbDqz7iJh8vvmFtkKnDkbxZ+kyH1pPgfjCtM",
     "machineId": "netwatch-dashboard-live",
     "timeoutMs": 5000

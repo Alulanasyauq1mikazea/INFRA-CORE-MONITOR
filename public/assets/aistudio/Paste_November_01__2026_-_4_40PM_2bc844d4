@@ -1,0 +1,1051 @@
+      "value": "/_profiler/phpinfo"
+     },
+     {
+      "key": "http_status",
+      "value": "302"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:56+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:56 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/actuator/env"
+     },
+     {
+      "key": "http_status",
+      "value": "302"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:56+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:56 +0900 +0900"
+   }
+  ],
+  "events_count": 44,
+  "id": 9828,
+  "kind": "crowdsec",
+  "labels": null,
+  "leakspeed": "500ms",
+  "machine_id": "localhost",
+  "message": "Ip 34.52.234.95 performed 'crowdsecurity/http-crawl-non_statics' (44 events over 1.633965755s) at 2026-11-01 06:22:56.035929931 +0000 UTC",
+  "meta": [
+   {
+    "key": "status",
+    "value": "[\"404\",\"302\"]"
+   },
+   {
+    "key": "method",
+    "value": "[\"GET\"]"
+   },
+   {
+    "key": "user_agent",
+    "value": "[\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\"]"
+   },
+   {
+    "key": "target_uri",
+    "value": "[\"/.netrc\",\"/.npmrc\",\"/.s3cfg\",\"/Dockerfile\",\"/_profiler/phpinfo\",\"/actuator/env\"]"
+   }
+  ],
+  "remediation": true,
+  "scenario": "crowdsecurity/http-crawl-non_statics",
+  "scenario_hash": "9f235ae2116031a2b7a64da1e3ff5356b5f4fb91078de1c78bc30e0edb734dfb",
+  "scenario_version": "0.7",
+  "simulated": false,
+  "source": {
+   "as_name": "GOOGLE-CLOUD-PLATFORM",
+   "as_number": "396982",
+   "cn": "BE",
+   "ip": "34.52.234.95",
+   "latitude": 50.8534,
+   "longitude": 4.347,
+   "range": "34.32.0.0/11",
+   "scope": "Ip",
+   "value": "34.52.234.95"
+  },
+  "start_at": "2026-11-01T06:22:54Z",
+  "stop_at": "2026-11-01T06:22:56Z",
+  "uuid": "492defa9-1771-4ec8-a795-9d9708b0cf19"
+ },
+ {
+  "capacity": 10,
+  "created_at": "2026-11-01T06:22:56Z",
+  "decisions": [
+   {
+    "duration": "22h44m45s",
+    "id": 19252885,
+    "origin": "crowdsec",
+    "scenario": "crowdsecurity/http-probing",
+    "scope": "Ip",
+    "simulated": false,
+    "type": "ban",
+    "value": "34.52.234.95"
+   }
+  ],
+  "events": [
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.aws/.env"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.aws/config"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.amplifyrc"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.aws/credentials.bak"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.claude/settings.json"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.aws/credentials"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.claude/settings.local.json"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.boto"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.cursor/mcp.json"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.docker/config.json"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   },
+   {
+    "meta": [
+     {
+      "key": "ASNNumber",
+      "value": "396982"
+     },
+     {
+      "key": "ASNOrg",
+      "value": "GOOGLE-CLOUD-PLATFORM"
+     },
+     {
+      "key": "IsInEU",
+      "value": "true"
+     },
+     {
+      "key": "IsoCode",
+      "value": "BE"
+     },
+     {
+      "key": "SourceRange",
+      "value": "34.32.0.0/11"
+     },
+     {
+      "key": "datasource_path",
+      "value": "/var/log/nginx/LAPORANKASFATEK-access.log"
+     },
+     {
+      "key": "datasource_type",
+      "value": "file"
+     },
+     {
+      "key": "http_args_len",
+      "value": "0"
+     },
+     {
+      "key": "http_path",
+      "value": "/.env"
+     },
+     {
+      "key": "http_status",
+      "value": "404"
+     },
+     {
+      "key": "http_user_agent",
+      "value": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36"
+     },
+     {
+      "key": "http_verb",
+      "value": "GET"
+     },
+     {
+      "key": "log_type",
+      "value": "http_access-log"
+     },
+     {
+      "key": "service",
+      "value": "http"
+     },
+     {
+      "key": "source_ip",
+      "value": "34.52.234.95"
+     },
+     {
+      "key": "timestamp",
+      "value": "2026-11-01T15:22:55+09:00"
+     }
+    ],
+    "timestamp": "2026-11-01 15:22:55 +0900 +0900"
+   }
+  ],
+  "events_count": 11,
+  "id": 9827,
+  "kind": "crowdsec",
+  "labels": null,
+  "leakspeed": "10s",
+  "machine_id": "localhost",
+  "message": "Ip 34.52.234.95 performed 'crowdsecurity/http-probing' (11 events over 7.233555ms) at 2026-11-01 06:22:55.345151857 +0000 UTC",
+  "meta": [
+   {
+    "key": "method",
+    "value": "[\"GET\"]"
+   },
+   {
+    "key": "status",
+    "value": "[\"404\"]"
+   },
+   {
+    "key": "target_uri",
+    "value": "[\"/.aws/.env\",\"/.aws/config\",\"/.amplifyrc\",\"/.aws/credentials.bak\",\"/.claude/settings.json\",\"/.aws/credentials\",\"/.claude/settings.local.json\",\"/.boto\",\"/.cursor/mcp.json\",\"/.docker/config.json\",\"/.env\"]"
+   },
+   {
+    "key": "user_agent",
+    "value": "[\"Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36\"]"
+   }
+  ],
+  "remediation": true,
+  "scenario": "crowdsecurity/http-probing",
+  "scenario_hash": "4b16f896af400e006c28b1476bf5989c748186f2b3756ed9ad7d1559480d278c",
+  "scenario_version": "0.4",
+  "simulated": false,
+  "source": {
+   "as_name": "GOOGLE-CLOUD-PLATFORM",
+   "as_number": "396982",
+   "cn": "BE",
+   "ip": "34.52.234.95",
+   "latitude": 50.8534,
+   "longitude": 4.347,
+   "range": "34.32.0.0/11",
+   "scope": "Ip",
+   "value": "34.52.234.95"
+  },
+  "start_at": "2026-11-01T06:22:55Z",
+  "stop_at": "2026-11-01T06:22:55Z",
+  "uuid": "bb1eba52-0541-40ba-8b71-c4818582b520"
+ }
+]reserveproxy@proxyunmus:~$ docker exec sudo cscli decisions list -l 10
+Error response from daemon: No such container: sudo
+reserveproxy@proxyunmus:~$ sudo docker exec cscli decisions list -l 10
+Error response from daemon: No such container: cscli
+reserveproxy@proxyunmus:~$ sudo docker exec -it crowdsec cscli decisions list
+╭──────────┬──────────┬────────────────────┬────────────────────────────────────────────┬────────┬─────────┬──────────────────────────────────────────────┬────────┬────────────┬──────────╮
+│    ID    │  Source  │     Scope:Value    │                   Reason                   │ Action │ Country │                      AS                      │ Events │ expiration │ Alert ID │
+├──────────┼──────────┼────────────────────┼────────────────────────────────────────────┼────────┼─────────┼──────────────────────────────────────────────┼────────┼────────────┼──────────┤
+│ 19267893 │ crowdsec │ Ip:170.64.191.232  │ crowdsecurity/http-cve-probing             │ ban    │ AU      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 23h56m13s  │ 9837     │
+│ 19267892 │ crowdsec │ Ip:35.233.121.185  │ crowdsecurity/http-bad-user-agent          │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 2      │ 23h50m36s  │ 9836     │
+│ 19267891 │ crowdsec │ Ip:143.198.40.69   │ crowdsecurity/http-cve-probing             │ ban    │ CA      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 23h46m15s  │ 9835     │
+│ 19267890 │ crowdsec │ Ip:134.82.69.64    │ LePresidente/http-generic-403-bf           │ ban    │ US      │                                              │ 6      │ 23h42m53s  │ 9834     │
+│ 19252889 │ crowdsec │ Ip:34.32.119.160   │ crowdsecurity/http-sensitive-files         │ ban    │ DE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 5      │ 23h28m34s  │ 9832     │
+│ 19252888 │ crowdsec │ Ip:45.138.12.19    │ crowdsecurity/http-probing                 │ ban    │ LT      │                                              │ 11     │ 23h20m15s  │ 9831     │
+│ 19252887 │ crowdsec │ Ip:34.52.234.95    │ crowdsecurity/http-admin-interface-probing │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 70h43m9s   │ 9830     │
+│ 19252883 │ crowdsec │ Ip:136.80.159.102  │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 16     │ 22h36m55s  │ 9825     │
+│ 19252882 │ crowdsec │ Ip:167.71.242.158  │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 22h11m41s  │ 9824     │
+│ 19252881 │ crowdsec │ Ip:207.175.50.88   │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 2      │ 21h43m48s  │ 9823     │
+│ 19252880 │ crowdsec │ Ip:170.64.167.5    │ crowdsecurity/http-cve-probing             │ ban    │ AU      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 21h32m35s  │ 9822     │
+│ 19237879 │ crowdsec │ Ip:144.126.197.85  │ crowdsecurity/http-cve-probing             │ ban    │ GB      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 21h24m36s  │ 9820     │
+│ 19237878 │ crowdsec │ Ip:146.190.68.227  │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 21h13m38s  │ 9819     │
+│ 19237877 │ crowdsec │ Ip:47.245.110.93   │ crowdsecurity/http-cve-probing             │ ban    │ SG      │ 45102 Alibaba US Technology Co., Ltd.        │ 1      │ 21h1m22s   │ 9818     │
+│ 19237876 │ crowdsec │ Ip:159.223.157.148 │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 20h47m2s   │ 9817     │
+│ 19237875 │ crowdsec │ Ip:209.38.85.196   │ crowdsecurity/http-cve-probing             │ ban    │ AU      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 20h31m59s  │ 9816     │
+│ 19222874 │ crowdsec │ Ip:161.35.145.64   │ crowdsecurity/http-cve-probing             │ ban    │ NL      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 19h9m56s   │ 9814     │
+│ 19222873 │ crowdsec │ Ip:66.132.224.252  │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │                                              │ 2      │ 18h45m59s  │ 9813     │
+│ 19222872 │ crowdsec │ Ip:167.71.117.225  │ crowdsecurity/http-cve-probing             │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 18h31m26s  │ 9812     │
+│ 19222871 │ crowdsec │ Ip:34.162.124.128  │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 5      │ 18h29m13s  │ 9811     │
+│ 19222870 │ crowdsec │ Ip:54.237.236.60   │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 14618 AMAZON-AES                             │ 6      │ 18h3m32s   │ 9810     │
+│ 19207869 │ crowdsec │ Ip:129.212.239.21  │ crowdsecurity/http-probing                 │ ban    │ SG      │ 14061 DIGITALOCEAN-ASN                       │ 11     │ 41h24m27s  │ 9808     │
+│ 19207868 │ crowdsec │ Ip:16.55.46.0      │ crowdsecurity/http-sensitive-files         │ ban    │ CA      │ 16509 AMAZON-02                              │ 6      │ 17h17m8s   │ 9807     │
+│ 19207867 │ crowdsec │ Ip:51.44.108.26    │ crowdsecurity/http-probing                 │ ban    │ FR      │ 16509 AMAZON-02                              │ 11     │ 16h47m25s  │ 9806     │
+│ 19192865 │ crowdsec │ Ip:45.148.10.40    │ crowdsecurity/http-cve-probing             │ ban    │ NL      │ 48090 Techoff Srv Limited                    │ 1      │ 35h20m19s  │ 9803     │
+│ 19192864 │ crowdsec │ Ip:185.177.125.94  │ LePresidente/http-generic-403-bf           │ ban    │ NL      │ 49981 WorldStream B.V.                       │ 6      │ 11h6m52s   │ 9802     │
+│ 19177863 │ crowdsec │ Ip:164.90.208.56   │ crowdsecurity/jira_cve-2021-26086          │ ban    │ DE      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 34h25m21s  │ 9800     │
+│ 19177861 │ crowdsec │ Ip:142.93.0.66     │ crowdsecurity/jira_cve-2021-26086          │ ban    │ US      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 10h25m11s  │ 9798     │
+│ 19177860 │ crowdsec │ Ip:163.128.183.229 │ crowdsecurity/http-cve-probing             │ ban    │         │                                              │ 1      │ 9h48m18s   │ 9797     │
+│ 19177859 │ crowdsec │ Ip:46.202.160.99   │ crowdsecurity/http-probing                 │ ban    │ IN      │ 47583 Hostinger International Limited        │ 11     │ 33h36m27s  │ 9796     │
+│ 19162857 │ crowdsec │ Ip:5.110.40.54     │ crowdsecurity/http-probing                 │ ban    │ SA      │ 35819 Etihad Etisalat, a joint stock company │ 11     │ 8h7m27s    │ 9793     │
+│ 19147855 │ crowdsec │ Ip:104.28.241.117  │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 13335 CLOUDFLARENET                          │ 5      │ 6h3m35s    │ 9790     │
+│ 19147854 │ crowdsec │ Ip:66.132.159.84   │ crowdsecurity/http-bad-user-agent          │ ban    │ US      │ 398324 CENSYS-ARIN-01                        │ 2      │ 5h47m56s   │ 9789     │
+│ 19147853 │ crowdsec │ Ip:89.39.107.195   │ LePresidente/http-generic-403-bf           │ ban    │ NL      │ 49981 WorldStream B.V.                       │ 6      │ 5h29m39s   │ 9788     │
+│ 19132852 │ crowdsec │ Ip:34.88.171.29    │ crowdsecurity/http-probing                 │ ban    │ FI      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 21h51m2s   │ 9786     │
+│ 19132850 │ crowdsec │ Ip:45.138.12.142   │ crowdsecurity/http-probing                 │ ban    │ LT      │                                              │ 11     │ 45h50m30s  │ 9784     │
+│ 19117844 │ crowdsec │ Ip:45.138.12.18    │ crowdsecurity/http-probing                 │ ban    │ LT      │                                              │ 11     │ 20h38m57s  │ 9777     │
+│ 19102843 │ crowdsec │ Ip:194.26.192.113  │ crowdsecurity/http-probing                 │ ban    │ NL      │ 210558 1337 Services GmbH                    │ 11     │ 19h36m16s  │ 9775     │
+│ 19102842 │ crowdsec │ Ip:45.138.12.25    │ crowdsecurity/http-probing                 │ ban    │ LT      │                                              │ 11     │ 19h3m13s   │ 9774     │
+│ 19102841 │ crowdsec │ Ip:178.128.207.138 │ crowdsecurity/http-probing                 │ ban    │ DE      │ 14061 DIGITALOCEAN-ASN                       │ 13     │ 65h55m11s  │ 9772     │
+│ 19087837 │ crowdsec │ Ip:123.57.190.191  │ crowdsecurity/http-probing                 │ ban    │ CN      │ 37963 Hangzhou Alibaba Advertising Co.,Ltd.  │ 11     │ 17h39m9s   │ 9767     │
+│ 19072831 │ crowdsec │ Ip:93.123.109.230  │ crowdsecurity/http-bad-user-agent          │ ban    │ BG      │ 48090 Techoff Srv Limited                    │ 2      │ 15h23m45s  │ 9760     │
+│ 19072829 │ crowdsec │ Ip:159.89.12.166   │ crowdsecurity/jira_cve-2021-26086          │ ban    │ DE      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 15h21m3s   │ 9758     │
+│ 19072828 │ crowdsec │ Ip:193.47.62.32    │ crowdsecurity/http-crawl-non_statics       │ ban    │ BG      │ 199959 Gwy It Pty Ltd                        │ 41     │ 38h30m49s  │ 9757     │
+│ 19072826 │ crowdsec │ Ip:34.73.159.61    │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 14h8m12s   │ 9755     │
+│ 19057822 │ crowdsec │ Ip:91.148.245.81   │ crowdsecurity/http-probing                 │ ban    │ NL      │ 34343 Eweka Internet Services B.V.           │ 11     │ 13h15m2s   │ 9749     │
+│ 19057819 │ crowdsec │ Ip:172.237.84.253  │ crowdsecurity/http-cve-probing             │ ban    │ SG      │ 63949 Akamai Connected Cloud                 │ 1      │ 12h23m6s   │ 9746     │
+│ 19057818 │ crowdsec │ Ip:34.18.181.53    │ crowdsecurity/http-probing                 │ ban    │ QA      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 12h13m4s   │ 9745     │
+│ 19042816 │ crowdsec │ Ip:169.40.142.177  │ crowdsecurity/http-probing                 │ ban    │ DE      │ 61317 Hivelocity LLC                         │ 11     │ 10h20m52s  │ 9742     │
+│ 19042814 │ crowdsec │ Ip:85.155.15.20    │ crowdsecurity/http-probing                 │ ban    │ ES      │                                              │ 11     │ 33h50m15s  │ 9739     │
+│ 19027812 │ crowdsec │ Ip:157.245.36.108  │ crowdsecurity/jira_cve-2021-26086          │ ban    │ GB      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 9h40m46s   │ 9736     │
+│ 19027809 │ crowdsec │ Ip:68.183.9.16     │ crowdsecurity/http-probing                 │ ban    │ NL      │ 14061 DIGITALOCEAN-ASN                       │ 12     │ 9h39m38s   │ 9733     │
+│ 19027807 │ crowdsec │ Ip:81.171.72.93    │ crowdsecurity/http-sensitive-files         │ ban    │ DE      │ 34343 Eweka Internet Services B.V.           │ 5      │ 81h20m15s  │ 9731     │
+│ 19027806 │ crowdsec │ Ip:35.240.100.200  │ crowdsecurity/http-admin-interface-probing │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 129h16m41s │ 9730     │
+│ 19027802 │ crowdsec │ Ip:35.205.116.134  │ crowdsecurity/http-admin-interface-probing │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 9h5m52s    │ 9726     │
+│ 19027797 │ crowdsec │ Ip:34.91.144.59    │ crowdsecurity/http-probing                 │ ban    │ NL      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 8h17m34s   │ 9720     │
+│ 19027795 │ crowdsec │ Ip:114.12.10.151   │ crowdsecurity/http-wordpress-scan          │ ban    │ ID      │                                              │ 4      │ 8h7m40s    │ 9718     │
+│ 19012792 │ crowdsec │ Ip:213.163.195.0   │ crowdsecurity/http-crawl-non_statics       │ ban    │ SG      │ 202053 UpCloud Ltd                           │ 45     │ 6h14m37s   │ 9714     │
+│ 18997789 │ crowdsec │ Ip:35.205.254.119  │ crowdsecurity/http-crawl-non_statics       │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 43     │ 29h28m18s  │ 9710     │
+│ 18997784 │ crowdsec │ Ip:35.241.178.74   │ crowdsecurity/http-admin-interface-probing │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 148h2m52s  │ 9705     │
+│ 18997780 │ crowdsec │ Ip:34.38.113.44    │ crowdsecurity/http-admin-interface-probing │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 27h56m44s  │ 9700     │
+│ 18997776 │ crowdsec │ Ip:34.156.22.151   │ crowdsecurity/http-admin-interface-probing │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 3      │ 3h55m24s   │ 9695     │
+│ 18997771 │ crowdsec │ Ip:34.62.213.231   │ crowdsecurity/http-probing                 │ ban    │ BE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 3h43m39s   │ 9689     │
+│ 18997764 │ crowdsec │ Ip:164.92.244.132  │ crowdsecurity/jira_cve-2021-26086          │ ban    │ DE      │ 14061 DIGITALOCEAN-ASN                       │ 1      │ 27h22m12s  │ 9680     │
+│ 18997759 │ crowdsec │ Ip:34.131.173.180  │ crowdsecurity/http-probing                 │ ban    │ IN      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 3h9m29s    │ 9675     │
+│ 18997756 │ crowdsec │ Ip:34.40.80.240    │ crowdsecurity/http-probing                 │ ban    │ DE      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 3h4m26s    │ 9671     │
+│ 18997753 │ crowdsec │ Ip:34.165.152.147  │ crowdsecurity/http-probing                 │ ban    │ IL      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 11     │ 2h59m49s   │ 9667     │
+│ 18967747 │ crowdsec │ Ip:93.152.221.92   │ crowdsecurity/http-cve-probing             │ ban    │ BG      │                                              │ 1      │ 24h1m1s    │ 9658     │
+│ 18952744 │ crowdsec │ Ip:20.194.45.183   │ crowdsecurity/http-wordpress-scan          │ ban    │ KR      │ 8075 MICROSOFT-CORP-MSN-AS-BLOCK             │ 4      │ 46h13m27s  │ 9654     │
+│ 18952742 │ crowdsec │ Ip:34.55.131.206   │ crowdsecurity/http-probing                 │ ban    │ US      │ 396982 GOOGLE-CLOUD-PLATFORM                 │ 12     │ 21h59m35s  │ 9652     │
+│ 18952736 │ crowdsec │ Ip:185.218.86.14   │ crowdsecurity/http-sensitive-files         │ ban    │ US      │ 60223 Netiface Limited                       │ 9      │ 20h22m52s  │ 9646     │
+╰──────────┴──────────┴────────────────────┴────────────────────────────────────────────┴────────┴─────────┴──────────────────────────────────────────────┴────────┴────────────┴──────────╯
+29 duplicated entries skipped
+reserveproxy@proxyunmus:~$ 

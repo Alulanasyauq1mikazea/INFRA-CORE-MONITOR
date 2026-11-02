@@ -566,7 +566,7 @@ class SqliteDatabaseManager {
     );
     insertSetting.run('environment_profile', 'campus_unmus', 'general', now);
     insertSetting.run('organization_name', 'Universitas Musamus Data Center & NOC', 'general', now);
-    insertSetting.run('auto_fallback_simulation', 'true', 'general', now);
+    insertSetting.run('auto_fallback_simulation', 'false', 'general', now);
     insertSetting.run('snmp_default_community', 'public', 'network', now);
     insertSetting.run('default_prometheus_host', 'http://192.168.77.30:9090', 'metrics', now);
 

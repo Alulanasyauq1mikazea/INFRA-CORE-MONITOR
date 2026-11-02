@@ -167,25 +167,25 @@ function decodeEmojiToIso(emoji?: string): string | null {
  * Resolves any input (ISO-2 code, full country name, or flag emoji) to a valid 2-letter ISO code
  */
 export function resolveCountryIsoCode(countryInput?: string, flagEmoji?: string): string | null {
-  // 1. Try decoding from flag emoji if present
+  // 1. Direct ISO code check first (canonical source of truth)
+  if (countryInput) {
+    const raw = countryInput.trim().toLowerCase();
+    if (raw === 'lan' || raw === 'local' || raw === 'localhost' || raw === 'loopback') {
+      return 'lan';
+    }
+    if (raw === 'xx' || raw === 'global' || raw === 'unknown') {
+      // Continue to emoji or other checks
+    } else if (raw.length === 2 && /^[a-z]{2}$/.test(raw)) {
+      return raw;
+    }
+  }
+
+  // 2. Try decoding from flag emoji if present
   const fromEmoji = decodeEmojiToIso(flagEmoji) || decodeEmojiToIso(countryInput);
   if (fromEmoji) return fromEmoji;
 
   if (!countryInput) return null;
   const raw = countryInput.trim().toLowerCase();
-
-  // Special virtual/private network handles
-  if (raw === 'lan' || raw === 'local' || raw === 'localhost' || raw === 'loopback') {
-    return 'lan';
-  }
-  if (raw === 'xx' || raw === 'global' || raw === 'unknown') {
-    return null;
-  }
-
-  // 2. Direct 2-letter ISO code
-  if (raw.length === 2 && /^[a-z]{2}$/.test(raw)) {
-    return raw;
-  }
 
   // 3. Try finding matches in known country names (handles "Indonesia (Jakarta)", "Germany (Frankfurt)")
   for (const [key, code] of Object.entries(COUNTRY_NAME_TO_ISO)) {

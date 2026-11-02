@@ -230,7 +230,7 @@ export const PrometheusTargetManager: React.FC = () => {
     };
   };
 
-  const getModuleDefaultMetrics = (moduleName: string, jobName: string = ''): string[] => {
+  const getModuleDefaultMetrics = (moduleName?: string, jobName: string = ''): string[] => {
     const mod = String(moduleName || '').toLowerCase();
     const job = String(jobName || '').toLowerCase();
 
@@ -864,7 +864,7 @@ export const PrometheusTargetManager: React.FC = () => {
   const filteredTargets = activeTargets.filter((t) => {
     const matchesSearch =
       !searchQuery ||
-      t.job.toLowerCase().includes(searchQuery.toLowerCase()) ||
+      (t.job || t.jobName || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
       t.endpoint.toLowerCase().includes(searchQuery.toLowerCase()) ||
       (t.mappedNodeName && t.mappedNodeName.toLowerCase().includes(searchQuery.toLowerCase()));
 
@@ -1196,7 +1196,7 @@ export const PrometheusTargetManager: React.FC = () => {
                   <span className="text-cyan-300 font-bold truncate">{target.endpoint}</span>
                 </div>
                 <div className="flex items-center justify-between text-[11px] text-slate-400 pt-0.5">
-                  <span>Instance IP: <span className="text-slate-200">{target.labels.instance || 'localhost'}</span></span>
+                  <span>Instance IP: <span className="text-slate-200">{target.labels?.instance || 'localhost'}</span></span>
                   <span>Scrape: <span className="text-slate-200">{target.scrapeDuration}</span></span>
                 </div>
               </div>
@@ -1235,7 +1235,7 @@ export const PrometheusTargetManager: React.FC = () => {
                 </div>
 
                 <div className="flex flex-wrap gap-1">
-                  {(target.selectedMetrics || getModuleDefaultMetrics(target.mappedModule, target.job)).map((m, idx) => (
+                  {(target.selectedMetrics || getModuleDefaultMetrics(target.mappedModule, target.job || '')).map((m, idx) => (
                     <button
                       key={idx}
                       onClick={() => setInspectingMetric({ metricName: m, target })}
@@ -1629,7 +1629,7 @@ export const PrometheusTargetManager: React.FC = () => {
 
             <div className="space-y-4">
               <p className="text-xs text-slate-300">
-                Karena target server <strong className="text-orange-300">{guideTarget.job}</strong> belum memiliki Prometheus Exporter aktif, jalankan perintah di bawah ini pada server target (<code className="text-cyan-300 font-mono">{guideTarget.labels.instance || guideTarget.endpoint}</code>):
+                Karena target server <strong className="text-orange-300">{guideTarget.job}</strong> belum memiliki Prometheus Exporter aktif, jalankan perintah di bawah ini pada server target (<code className="text-cyan-300 font-mono">{guideTarget.labels?.instance || guideTarget.endpoint}</code>):
               </p>
 
               {/* Command Step 1: Install Node Exporter on Target Server */}
@@ -1661,7 +1661,7 @@ export const PrometheusTargetManager: React.FC = () => {
                   <button
                     onClick={() =>
                       handleCopyCode(
-                        `  - job_name: '${guideTarget.job}'\n    static_configs:\n      - targets: ['${guideTarget.labels.instance || '192.168.77.x:9100'}']`,
+                        `  - job_name: '${guideTarget.job}'\n    static_configs:\n      - targets: ['${guideTarget.labels?.instance || '192.168.77.x:9100'}']`,
                         'cmd2'
                       )
                     }
@@ -1674,7 +1674,7 @@ export const PrometheusTargetManager: React.FC = () => {
                 <div className="bg-slate-950 p-3 rounded-xl border border-slate-800 font-mono text-xs text-orange-300 whitespace-pre overflow-x-auto">
 {`  - job_name: '${guideTarget.job}'
     static_configs:
-      - targets: ['${guideTarget.labels.instance || '192.168.77.x:9100'}']`}
+      - targets: ['${guideTarget.labels?.instance || '192.168.77.x:9100'}']`}
                 </div>
               </div>
             </div>
@@ -1695,7 +1695,7 @@ export const PrometheusTargetManager: React.FC = () => {
       {inspectingMetric && (() => {
         const metricDetail = getMetricDocDetail(inspectingMetric.metricName, inspectingMetric.target);
         const IconComponent = metricDetail.icon || Code;
-        const targetMetrics = inspectingMetric.target.selectedMetrics || getModuleDefaultMetrics(inspectingMetric.target.mappedModule, inspectingMetric.target.job);
+        const targetMetrics = inspectingMetric.target.selectedMetrics || getModuleDefaultMetrics(inspectingMetric.target.mappedModule, inspectingMetric.target.job || '');
 
         return (
           <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
@@ -1890,7 +1890,7 @@ export const PrometheusTargetManager: React.FC = () => {
 
       {/* 2. Full Target Metrics & Integration Documentation Pop-up Modal */}
       {selectedDocTarget && (() => {
-        const targetMetrics = selectedDocTarget.selectedMetrics || getModuleDefaultMetrics(selectedDocTarget.mappedModule, selectedDocTarget.job);
+        const targetMetrics = selectedDocTarget.selectedMetrics || getModuleDefaultMetrics(selectedDocTarget.mappedModule, selectedDocTarget.job || '');
 
         return (
           <div className="fixed inset-0 bg-slate-950/85 backdrop-blur-md z-50 flex items-center justify-center p-4 overflow-y-auto animate-in fade-in duration-200">
