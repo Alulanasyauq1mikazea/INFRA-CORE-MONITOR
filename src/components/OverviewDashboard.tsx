@@ -343,6 +343,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           storageTotalTb?: number;
           vmsRunning?: number;
           vmsTotal?: number;
+          isDown?: boolean;
         }> = {};
         const allParsedDynamicVms: ProxmoxVmItem[] = [];
 
@@ -353,7 +354,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               const text = await res.value.text();
               if (text && !text.trim().startsWith('<')) {
                 const data = JSON.parse(text);
-                if (data && data.rawMetrics) {
+                if (data && data.isDown) {
+                  parsedNodeMetrics[nodeId] = {
+                    cpu: 0,
+                    ram: 0,
+                    vmsRunning: 0,
+                    isDown: true,
+                  };
+                } else if (data && data.rawMetrics) {
                   // Dynamically extract real VM metrics (CPU, RAM, Disk) directly from Prometheus exporter
                   try {
                     const parsedVms = parseProxmoxExporterMetrics(`# TARGET_NODE: ${nodeId}\n` + data.rawMetrics);
@@ -509,9 +517,9 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             storageUsage: storage,
             storageUsedTb: live?.storageUsedTb ?? host.storageUsedTb,
             storageTotalTb: live?.storageTotalTb ?? host.storageTotalTb,
-            vmsRunning: live?.vmsRunning ?? host.vmsRunning,
+            vmsRunning: live?.isDown ? 0 : (live?.vmsRunning ?? host.vmsRunning),
             vmsTotal: live?.vmsTotal ?? host.vmsTotal,
-            status: 'online'
+            status: (live?.isDown ? 'offline' : (nodeInProp?.status === 'offline' ? 'offline' : nodeInProp?.status === 'warning' || nodeInProp?.status === 'critical' ? 'warning' : 'online')) as 'online' | 'warning' | 'offline',
           };
         }));
 

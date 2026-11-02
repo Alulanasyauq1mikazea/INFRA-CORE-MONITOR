@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { safeFetchJson } from './utils/apiHelpers';
+import { subscribeToTargets } from './services/targetDbService';
 import {
   initialNodes,
   generateInitialTimeSeries,
@@ -288,6 +289,55 @@ export default function App() {
     const interval = setInterval(fetchLiveBackendTelemetry, 5000);
 
     return () => clearInterval(interval);
+  }, []);
+
+  // Synchronize live DOWN targets into system alerts dynamically
+  useEffect(() => {
+    const unsubscribe = subscribeToTargets((targets) => {
+      if (!Array.isArray(targets)) return;
+
+      const downTargets = targets.filter((t) => t.state === 'DOWN' && !t.isPaused);
+      if (downTargets.length > 0) {
+        setAlerts((prev) => {
+          let updated = [...prev];
+          let changed = false;
+
+          downTargets.forEach((dt) => {
+            const alertId = `alt-down-${dt.id}`;
+            const existing = updated.find((a) => a.id === alertId);
+            const title = `Proxmox / Host Node DOWN: ${dt.nodeName || dt.job || dt.instanceIp}`;
+            const message = `Host server pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN / tidak merespons scrape Prometheus. Seluruh service atau VM pada host ini tidak dapat diakses.`;
+
+            if (!existing) {
+              updated = [
+                {
+                  id: alertId,
+                  nodeId: dt.id,
+                  nodeName: dt.nodeName || dt.job || dt.instanceIp || 'Host Server',
+                  category: 'server',
+                  severity: 'critical',
+                  title,
+                  message,
+                  timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                  status: 'active',
+                  sentViaTelegram: true,
+                  sentViaEmail: true,
+                },
+                ...updated,
+              ];
+              changed = true;
+            } else if (existing.status !== 'active') {
+              existing.status = 'active';
+              changed = true;
+            }
+          });
+
+          return changed ? updated : prev;
+        });
+      }
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const handleRefresh = () => {

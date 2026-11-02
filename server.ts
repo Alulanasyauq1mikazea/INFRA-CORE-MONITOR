@@ -5154,6 +5154,12 @@ function getPveDownMetrics(exporterUrl: string): string {
     return `# HELP pve_up Node/VM/CT-Status is online/running
 # TYPE pve_up gauge
 pve_up{id="node/informatika"} 0.0
+pve_guest_info{id="qemu/100",name="DAS-WAF-X",node="informatika",type="qemu",tags="192.168.14.10"} 1.0
+pve_guest_info{id="qemu/101",name="Informatika-LMS",node="informatika",type="qemu",tags="192.168.14.11"} 1.0
+pve_guest_info{id="qemu/102",name="LMS-Informatika",node="informatika",type="qemu",tags="192.168.14.12"} 1.0
+pve_guest_info{id="qemu/103",name="scedulesystem",node="informatika",type="qemu",tags="192.168.14.13"} 1.0
+pve_guest_info{id="qemu/104",name="VPN-OPNsense",node="informatika",type="qemu",tags="192.168.14.14"} 1.0
+pve_guest_info{id="qemu/105",name="SistemInformasiKelulusan",node="informatika",type="qemu",tags="192.168.14.15"} 1.0
 pve_up{id="qemu/100"} 0.0
 pve_up{id="qemu/101"} 0.0
 pve_up{id="qemu/102"} 0.0
