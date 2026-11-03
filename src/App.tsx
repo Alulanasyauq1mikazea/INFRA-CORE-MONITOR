@@ -291,50 +291,66 @@ export default function App() {
     return () => clearInterval(interval);
   }, []);
 
-  // Synchronize live DOWN targets into system alerts dynamically
+  // Synchronize live Prometheus DOWN targets into system alerts dynamically (Auto-Alert & Auto-Resolve)
   useEffect(() => {
     const unsubscribe = subscribeToTargets((targets) => {
       if (!Array.isArray(targets)) return;
 
       const downTargets = targets.filter((t) => t.state === 'DOWN' && !t.isPaused);
-      if (downTargets.length > 0) {
-        setAlerts((prev) => {
-          let updated = [...prev];
-          let changed = false;
+      const upTargets = targets.filter((t) => t.state === 'UP');
 
-          downTargets.forEach((dt) => {
-            const alertId = `alt-down-${dt.id}`;
-            const existing = updated.find((a) => a.id === alertId);
-            const title = `Proxmox / Host Node DOWN: ${dt.nodeName || dt.job || dt.instanceIp}`;
-            const message = `Host server pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN / tidak merespons scrape Prometheus. Seluruh service atau VM pada host ini tidak dapat diakses.`;
+      setAlerts((prev) => {
+        let updated = [...prev];
+        let changed = false;
 
-            if (!existing) {
-              updated = [
-                {
-                  id: alertId,
-                  nodeId: dt.id,
-                  nodeName: dt.nodeName || dt.job || dt.instanceIp || 'Host Server',
-                  category: 'server',
-                  severity: 'critical',
-                  title,
-                  message,
-                  timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
-                  status: 'active',
-                  sentViaTelegram: true,
-                  sentViaEmail: true,
-                },
-                ...updated,
-              ];
-              changed = true;
-            } else if (existing.status !== 'active') {
-              existing.status = 'active';
-              changed = true;
-            }
-          });
+        // 1. Process active DOWN targets: add or reactivate alerts
+        downTargets.forEach((dt) => {
+          const alertId = `alt-down-${dt.id}`;
+          const existing = updated.find((a) => a.id === alertId);
+          const nodeLabel = dt.nodeName || dt.job || dt.instanceIp || 'Host Server';
+          const moduleCat = (dt.mappedModule || dt.module || 'server') as any;
+          const reasonText = dt.healthReason || 'Target tidak merespons (Connection Refused / Timeout / Salah IP)';
+          const title = `🚨 [Scrape Alert] Target DOWN / Salah IP: ${nodeLabel}`;
+          const message = `Target scrape "${dt.job}" pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN. Penyebab: ${reasonText}. Pastikan IP tujuan, port exporter, dan firewall server sudah sesuai.`;
 
-          return changed ? updated : prev;
+          if (!existing) {
+            updated = [
+              {
+                id: alertId,
+                nodeId: dt.id,
+                nodeName: nodeLabel,
+                category: moduleCat,
+                severity: 'critical',
+                title,
+                message,
+                timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                status: 'active',
+                sentViaTelegram: true,
+                sentViaEmail: true,
+              },
+              ...updated,
+            ];
+            changed = true;
+          } else if (existing.status !== 'active' || existing.message !== message) {
+            existing.status = 'active';
+            existing.title = title;
+            existing.message = message;
+            changed = true;
+          }
         });
-      }
+
+        // 2. Auto-resolve alerts for targets that came back UP (server nyala lagi / IP sudah benar)
+        upTargets.forEach((ut) => {
+          const alertId = `alt-down-${ut.id}`;
+          const existing = updated.find((a) => a.id === alertId);
+          if (existing && existing.status === 'active') {
+            existing.status = 'resolved';
+            changed = true;
+          }
+        });
+
+        return changed ? updated : prev;
+      });
     });
 
     return () => unsubscribe();

@@ -116,6 +116,168 @@ const isSimulationEnabled = (): boolean => {
   return sqliteDb.getSetting('auto_fallback_simulation', 'false') === 'true';
 };
 
+// SWR Cache Entry Interface & Map for PVE Telemetry & Scrape Targets
+interface PveCacheEntry {
+  data: any;
+  timestamp: number;
+  isFetching?: boolean;
+}
+
+const pveExporterCacheMap: Record<string, PveCacheEntry> = {};
+
+// Target Live Health Tracker Interface & Map
+interface TargetLiveHealth {
+  state: 'UP' | 'DOWN';
+  healthReason?: string;
+  responseTimeMs?: number;
+  lastChecked: number;
+}
+
+const targetLiveHealthMap: Record<string, TargetLiveHealth> = {};
+
+async function verifyAllPrometheusTargetsHealth() {
+  const promHost = getActivePrometheusHost();
+  let liveTargetsFromProm: any[] | null = null;
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 2500);
+    const res = await fetch(`${promHost.replace(/\/$/, '')}/api/v1/targets`, { signal: controller.signal });
+    clearTimeout(timeout);
+    if (res.ok) {
+      const data = await res.json();
+      if (Array.isArray(data?.data?.activeTargets)) {
+        liveTargetsFromProm = data.data.activeTargets;
+      }
+    }
+  } catch {}
+
+  const targets = sqliteDb.getAllTargets();
+  const now = Date.now();
+
+  for (const t of targets) {
+    if (t.isPaused) continue;
+
+    const jobLower = String(t.job || t.jobName || '').toLowerCase();
+    const epLower = String(t.endpoint || '').toLowerCase();
+    const ipLower = String(t.instanceIp || '').toLowerCase();
+
+    // 1. Check if reported by Prometheus server
+    let matchedProm: any = null;
+    if (liveTargetsFromProm) {
+      matchedProm = liveTargetsFromProm.find((lt: any) => {
+        const j = String(lt.job || lt.labels?.job || '').toLowerCase();
+        const s = String(lt.scrapeUrl || lt.globalUrl || lt.labels?.instance || '').toLowerCase();
+        return (
+          (j && (j === jobLower || jobLower.includes(j))) ||
+          (s && (s.includes(ipLower) || s === epLower))
+        );
+      });
+    }
+
+    if (matchedProm) {
+      const isDown = matchedProm.health === 'down';
+      const healthReason = isDown
+        ? (matchedProm.lastError || 'Target Salah / Connection Refused (Prometheus)')
+        : '';
+      const responseTime = isDown ? 0 : Math.max(1, Math.round(Number(matchedProm.lastScrapeDuration || 0.05) * 1000));
+
+      targetLiveHealthMap[t.id] = {
+        state: isDown ? 'DOWN' : 'UP',
+        healthReason,
+        responseTimeMs: responseTime,
+        lastChecked: now,
+      };
+
+      if (t.state !== (isDown ? 'DOWN' : 'UP')) {
+        try {
+          sqliteDb.updateTarget(t.id, {
+            state: isDown ? 'DOWN' : 'UP',
+            responseTimeMs: responseTime,
+            scrapeDuration: `${responseTime}ms`,
+          });
+        } catch {}
+      }
+      continue;
+    }
+
+    // 2. Check PVE exporter cache
+    let pveMatched = false;
+    for (const [exporterUrl, cache] of Object.entries(pveExporterCacheMap)) {
+      if (cache && cache.data) {
+        const match =
+          exporterUrl.includes(ipLower) ||
+          exporterUrl.includes(epLower) ||
+          (ipLower === '192.168.14.222' && (jobLower.includes('lab-ti') || t.id === 'tgt-pve-lab-ti'));
+        if (match) {
+          pveMatched = true;
+          const isDown = cache.data.isDown === true || cache.data.status === 'down';
+          const reason = isDown ? (cache.data.error || 'Host Unreachable / Connection Timeout') : '';
+          targetLiveHealthMap[t.id] = {
+            state: isDown ? 'DOWN' : 'UP',
+            healthReason: reason,
+            responseTimeMs: isDown ? 0 : 50,
+            lastChecked: now,
+          };
+          if (t.state !== (isDown ? 'DOWN' : 'UP')) {
+            try {
+              sqliteDb.updateTarget(t.id, {
+                state: isDown ? 'DOWN' : 'UP',
+                responseTimeMs: isDown ? 0 : 50,
+              });
+            } catch {}
+          }
+          break;
+        }
+      }
+    }
+    if (pveMatched) continue;
+
+    // 3. Fallback active probe if endpoint is a direct HTTP/HTTPS URL
+    if (t.endpoint && (t.endpoint.startsWith('http://') || t.endpoint.startsWith('https://'))) {
+      try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 2000);
+        const startTime = Date.now();
+        const probeRes = await fetch(t.endpoint, { method: 'GET', signal: controller.signal }).catch(() => null);
+        clearTimeout(timeout);
+        const latency = Date.now() - startTime;
+
+        if (probeRes) {
+          targetLiveHealthMap[t.id] = {
+            state: 'UP',
+            responseTimeMs: latency,
+            lastChecked: now,
+          };
+        } else {
+          targetLiveHealthMap[t.id] = {
+            state: 'DOWN',
+            healthReason: 'Koneksi Ditolak / Timeout (Salah Target atau Port Tidak Aktif)',
+            responseTimeMs: 0,
+            lastChecked: now,
+          };
+        }
+      } catch (err: any) {
+        targetLiveHealthMap[t.id] = {
+          state: 'DOWN',
+          healthReason: err.message || 'Koneksi Gagal / Timeout',
+          responseTimeMs: 0,
+          lastChecked: now,
+        };
+      }
+    }
+  }
+}
+
+// Background verifier loop: Runs every 4 seconds
+setInterval(() => {
+  verifyAllPrometheusTargetsHealth().catch(() => {});
+}, 4000);
+
+setTimeout(() => {
+  verifyAllPrometheusTargetsHealth().catch(() => {});
+}, 1000);
+
 // -------------------------------------------------------------
 // Centralized Data & Integration Hub (SQLite 3 Native Integration)
 // -------------------------------------------------------------
@@ -125,13 +287,53 @@ app.get('/api/hub/targets', (req, res) => {
   try {
     const { module, state, search } = req.query as Record<string, string>;
     const targets = sqliteDb.getAllTargets({ module, state, search });
+
+    // Dynamically overlay real-time health from targetLiveHealthMap & pveExporterCacheMap
+    const liveTargets = targets.map((t: any) => {
+      if (t.isPaused) return t;
+
+      const live = targetLiveHealthMap[t.id];
+      if (live) {
+        return {
+          ...t,
+          state: live.state,
+          responseTimeMs: live.responseTimeMs ?? t.responseTimeMs,
+          healthReason: live.healthReason ?? '',
+          scrapeDuration: live.state === 'DOWN' ? 'Timeout' : `${live.responseTimeMs ?? t.responseTimeMs}ms`,
+        };
+      }
+
+      const ep = String(t.endpoint || '');
+      const ip = String(t.instanceIp || '');
+      const job = String(t.job || t.jobName || '');
+
+      for (const [exporterUrl, cache] of Object.entries(pveExporterCacheMap)) {
+        if (cache && cache.data) {
+          const match =
+            exporterUrl.includes(ip) ||
+            exporterUrl.includes(ep) ||
+            (ip === '192.168.14.222' && (job.includes('lab-TI') || t.id === 'tgt-pve-lab-ti'));
+          if (match) {
+            const isDown = cache.data.isDown === true || cache.data.status === 'down';
+            return {
+              ...t,
+              state: isDown ? 'DOWN' : 'UP',
+              responseTimeMs: isDown ? 0 : t.responseTimeMs,
+              healthReason: isDown ? (cache.data.error || 'Host Unreachable / Connection Timeout') : '',
+            };
+          }
+        }
+      }
+      return t;
+    });
+
     return res.json({
       success: true,
       source: 'sqlite3_native',
-      targets,
-      total: targets.length,
-      activeCount: targets.filter((t) => !t.isPaused).length,
-      pausedCount: targets.filter((t) => t.isPaused).length,
+      targets: liveTargets,
+      total: liveTargets.length,
+      activeCount: liveTargets.filter((t) => !t.isPaused).length,
+      pausedCount: liveTargets.filter((t) => t.isPaused).length,
       timestamp: new Date().toISOString(),
     });
   } catch (err: any) {
@@ -3682,16 +3884,6 @@ app.get('/api/prometheus/targets', async (req, res) => {
     }
   }
 
-  if (userPrometheusTargetsStore && userPrometheusTargetsStore.length > 0) {
-    return res.json({
-      success: true,
-      mode: 'user_customized_targets',
-      storage: 'sqlite3_native',
-      promHost,
-      activeTargets: userPrometheusTargetsStore,
-    });
-  }
-
   // 1. Try fetching live targets from Prometheus server first
   let liveTargets: any[] | null = null;
   try {
@@ -3727,14 +3919,46 @@ app.get('/api/prometheus/targets', async (req, res) => {
     }
   }
 
+  // Also integrate real-time health from pveExporterCacheMap (Proxmox VE exporter probes)
+  for (const [exporterUrl, cache] of Object.entries(pveExporterCacheMap)) {
+    if (cache && cache.data) {
+      const isDown = cache.data.isDown === true || cache.data.status === 'down';
+      const health = isDown ? 'down' : 'up';
+      const lastError = isDown ? (cache.data.error || 'Host Unreachable / Connection Timeout') : undefined;
+
+      liveHealthMap[exporterUrl.toLowerCase()] = { health, lastError };
+      if (exporterUrl.includes('192.168.14.222')) {
+        liveHealthMap['proxmox_lab-ti'] = { health, lastError };
+        liveHealthMap['192.168.14.222'] = { health, lastError };
+      }
+      if (exporterUrl.includes('192.168.77.29')) {
+        liveHealthMap['proxmox_dekanat'] = { health, lastError };
+        liveHealthMap['192.168.77.29'] = { health, lastError };
+      }
+      if (exporterUrl.includes('192.168.77.242')) {
+        liveHealthMap['proxmox_teknik'] = { health, lastError };
+        liveHealthMap['192.168.77.242'] = { health, lastError };
+      }
+      if (exporterUrl.includes('192.168.77.99')) {
+        liveHealthMap['proxmox_simlitabmas'] = { health, lastError };
+        liveHealthMap['192.168.77.99'] = { health, lastError };
+      }
+    }
+  }
+
   if (userPrometheusTargetsStore && userPrometheusTargetsStore.length > 0) {
     // Overlay real-time live health status onto userPrometheusTargetsStore
     const updatedStore = userPrometheusTargetsStore.map((target: any) => {
       const jobKey = String(target.job || target.jobName || '').toLowerCase();
       const endpointKey = String(target.endpoint || '').toLowerCase();
+      const instanceKey = String(target.instanceIp || '').toLowerCase();
       const isUserPaused = target.isPaused === true || (target.state === 'DOWN' && String(target.healthReason || '').includes('Dijeda'));
-      
-      const matched = liveHealthMap[jobKey] || liveHealthMap[endpointKey];
+
+      const matched =
+        liveHealthMap[jobKey] ||
+        liveHealthMap[endpointKey] ||
+        (instanceKey ? liveHealthMap[instanceKey] : undefined);
+
       if (matched) {
         if (isUserPaused) {
           return {
@@ -3745,12 +3969,26 @@ app.get('/api/prometheus/targets', async (req, res) => {
             lastScrape: 'Paused / Stopped',
           };
         }
+        const isTargetDown = matched.health === 'down';
+        const nextState = isTargetDown ? 'DOWN' : matched.health === 'up' ? 'UP' : target.state;
+
+        // Persist dynamically into SQLite so persistent storage and /api/hub/targets stay in sync
+        if (target.id && target.state !== nextState && !target.isPaused) {
+          try {
+            sqliteDb.updateTarget(target.id, {
+              state: nextState as any,
+              responseTimeMs: isTargetDown ? 0 : target.responseTimeMs,
+            });
+          } catch {}
+        }
+
         return {
           ...target,
           health: matched.health,
-          state: matched.health === 'down' ? 'DOWN' : matched.health === 'up' ? 'UP' : target.state,
+          state: nextState,
           isPaused: false,
-          healthReason: matched.lastError || '',
+          healthReason: matched.lastError || (isTargetDown ? 'Host Unreachable / Connection Timeout' : ''),
+          responseTimeMs: isTargetDown ? 0 : target.responseTimeMs,
         };
       }
 
@@ -3816,7 +4054,8 @@ app.get('/api/prometheus/targets', async (req, res) => {
       {
         id: 'tgt-1',
         job: 'blackbox-http',
-        endpoint: 'http://localhost:9115/probe',
+        endpoint: 'http://192.168.77.30:9115/probe?module=http_2xx_or_3xx&target=http%3A%2F%2F192.168.77.100',
+        instanceIp: '192.168.77.30',
         state: 'UP',
         labels: { instance: 'http://192.168.77.100', job: 'blackbox-http', module: 'http_2xx_or_3xx', target: 'http://192.168.77.100' },
         lastScrape: '12.247s ago',
@@ -4584,14 +4823,6 @@ app.get('/api/prometheus/query', async (req, res) => {
 
 // Direct Proxmox Exporter Scraper API (e.g. http://192.168.14.222:9221/pve?module=default&target=192.168.14.222)
 // Ultra-fast Stale-While-Revalidate (SWR) cache with background scraping worker
-interface PveCacheEntry {
-  data: any;
-  timestamp: number;
-  isFetching?: boolean;
-}
-
-const pveExporterCacheMap: Record<string, PveCacheEntry> = {};
-
 function getPveFallbackMetrics(exporterUrl: string): string {
   const isNode02 = exporterUrl.includes('192.168.77.29') || exporterUrl.includes('dekanat') || exporterUrl.includes('pve') || exporterUrl.includes('node2');
   const isNode03 = exporterUrl.includes('192.168.77.30') || exporterUrl.includes('192.168.77.12') || exporterUrl.includes('fatek') || exporterUrl.includes('teknik') || exporterUrl.includes('storage') || exporterUrl.includes('node3');
@@ -5140,9 +5371,15 @@ function isExporterTargetMarkedDown(exporterUrl: string): boolean {
     const matched = targets.find((t: any) => 
       t.endpoint === exporterUrl || 
       (t.instanceIp && exporterUrl.includes(t.instanceIp)) ||
-      (t.job && exporterUrl.includes(t.job))
+      (t.labels?.instance && exporterUrl.includes(t.labels.instance)) ||
+      (t.job && (exporterUrl.includes(t.job) || (t.job.includes('lab-TI') && exporterUrl.includes('192.168.14.222'))))
     );
-    if (matched && (matched.state === 'DOWN' || (matched as any).health === 'down' || (matched as any).status === 'down')) {
+    if (matched && (
+      matched.state === 'DOWN' || 
+      (matched as any).health === 'down' || 
+      (matched as any).status === 'down' ||
+      (matched as any).status === 'offline'
+    )) {
       return true;
     }
   } catch {}
@@ -5150,24 +5387,41 @@ function isExporterTargetMarkedDown(exporterUrl: string): boolean {
 }
 
 function getPveDownMetrics(exporterUrl: string): string {
-  if (exporterUrl.includes('192.168.14.222')) {
+  if (exporterUrl.includes('192.168.14.222') || exporterUrl.includes('lab-ti') || exporterUrl.includes('informatika')) {
     return `# HELP pve_up Node/VM/CT-Status is online/running
 # TYPE pve_up gauge
 pve_up{id="node/informatika"} 0.0
-pve_guest_info{id="qemu/100",name="DAS-WAF-X",node="informatika",type="qemu",tags="192.168.14.10"} 1.0
-pve_guest_info{id="qemu/101",name="Informatika-LMS",node="informatika",type="qemu",tags="192.168.14.11"} 1.0
-pve_guest_info{id="qemu/102",name="LMS-Informatika",node="informatika",type="qemu",tags="192.168.14.12"} 1.0
-pve_guest_info{id="qemu/103",name="scedulesystem",node="informatika",type="qemu",tags="192.168.14.13"} 1.0
-pve_guest_info{id="qemu/104",name="VPN-OPNsense",node="informatika",type="qemu",tags="192.168.14.14"} 1.0
-pve_guest_info{id="qemu/105",name="SistemInformasiKelulusan",node="informatika",type="qemu",tags="192.168.14.15"} 1.0
 pve_up{id="qemu/100"} 0.0
 pve_up{id="qemu/101"} 0.0
 pve_up{id="qemu/102"} 0.0
 pve_up{id="qemu/103"} 0.0
 pve_up{id="qemu/104"} 0.0
 pve_up{id="qemu/105"} 0.0
+# HELP pve_guest_info VM/CT info
+# TYPE pve_guest_info gauge
+pve_guest_info{id="qemu/100",name="DAS-WAF-X",node="informatika",tags="192.168.14.10",template="0",type="qemu"} 1.0
+pve_guest_info{id="qemu/101",name="Informatika-LMS",node="informatika",tags="zabbix192.168.14.11",template="0",type="qemu"} 1.0
+pve_guest_info{id="qemu/102",name="LMS-Informatika",node="informatika",tags="lms-192.168.14.12",template="0",type="qemu"} 1.0
+pve_guest_info{id="qemu/103",name="scedulesystem",node="informatika",tags="penjadwalan-192.168.14.13",template="0",type="qemu"} 1.0
+pve_guest_info{id="qemu/104",name="VPN-OPNsense",node="informatika",tags="192.168.14.14",template="0",type="qemu"} 1.0
+pve_guest_info{id="qemu/105",name="SistemInformasiKelulusan",node="informatika",tags="192.168.14.15",template="0",type="qemu"} 1.0
+# HELP pve_node_info Node info
+# TYPE pve_node_info gauge
+pve_node_info{id="node/informatika",level="",name="informatika",nodeid="0"} 1.0
 pve_cpu_usage_ratio{id="node/informatika"} 0.0
+pve_cpu_usage_ratio{id="qemu/100"} 0.0
+pve_cpu_usage_ratio{id="qemu/101"} 0.0
+pve_cpu_usage_ratio{id="qemu/102"} 0.0
+pve_cpu_usage_ratio{id="qemu/103"} 0.0
+pve_cpu_usage_ratio{id="qemu/104"} 0.0
+pve_cpu_usage_ratio{id="qemu/105"} 0.0
 pve_memory_usage_bytes{id="node/informatika"} 0.0
+pve_memory_usage_bytes{id="qemu/100"} 0.0
+pve_memory_usage_bytes{id="qemu/101"} 0.0
+pve_memory_usage_bytes{id="qemu/102"} 0.0
+pve_memory_usage_bytes{id="qemu/103"} 0.0
+pve_memory_usage_bytes{id="qemu/104"} 0.0
+pve_memory_usage_bytes{id="qemu/105"} 0.0
 pve_memory_size_bytes{id="node/informatika"} 3.354707968e+10
 pve_disk_size_bytes{id="node/informatika"} 1.0086172672e+11
 pve_disk_usage_bytes{id="node/informatika"} 0.0

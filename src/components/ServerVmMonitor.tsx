@@ -867,6 +867,7 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
 
   const [isAutoPolling, setIsAutoPolling] = useState<boolean>(true);
   const [lastSyncTime, setLastSyncTime] = useState<string>(new Date().toLocaleTimeString());
+  const [exporterNodeDownMap, setExporterNodeDownMap] = useState<Record<string, boolean>>({});
 
   // Auto-fetch exporter metrics on mount & background auto-polling every 4 seconds across all enabled nodes
   useEffect(() => {
@@ -895,6 +896,8 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
         if (!isMounted) return;
 
         let combined = '';
+        const currentDownMap: Record<string, boolean> = {};
+
         for (let i = 0; i < results.length; i++) {
           const res = results[i];
           const target = activeTargets[i];
@@ -903,19 +906,33 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
               const text = await res.value.text();
               if (text && !text.trim().startsWith('<')) {
                 const data = JSON.parse(text);
+                if (data.isDown || data.status === 'down' || data.success === false) {
+                  currentDownMap[target.id] = true;
+                  if (target.url.includes('192.168.14.222')) {
+                    currentDownMap['pve-node-01'] = true;
+                  }
+                }
                 if (data && data.rawMetrics) {
                   combined += `# TARGET_NODE: ${target.id}\n` + data.rawMetrics + '\n';
                 }
               }
             } catch {
-              // Ignore background parse error
+              currentDownMap[target.id] = true;
+            }
+          } else {
+            currentDownMap[target.id] = true;
+            if (target.url.includes('192.168.14.222')) {
+              currentDownMap['pve-node-01'] = true;
             }
           }
         }
 
-        if (combined && isMounted) {
-          setRawExporterMetrics(combined);
-          setLastSyncTime(new Date().toLocaleTimeString());
+        if (isMounted) {
+          setExporterNodeDownMap(currentDownMap);
+          if (combined) {
+            setRawExporterMetrics(combined);
+            setLastSyncTime(new Date().toLocaleTimeString());
+          }
         }
       } catch {
         // Quiet background exporter warning
@@ -1129,28 +1146,54 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
     baseNodes.forEach((node) => {
       const tgtId = basePveTargetMap[node.id];
       const matched = hubServerTargets.find(
-        (t) => t.id === tgtId || (t.instanceIp && t.instanceIp === node.ip)
+        (t) =>
+          t.id === tgtId ||
+          (t.instanceIp && (t.instanceIp === node.ip || node.ip.includes(t.instanceIp))) ||
+          (t.endpoint && t.endpoint.includes(node.ip)) ||
+          (t.labels?.instance && (t.labels.instance === node.ip || t.labels.instance.includes(node.ip))) ||
+          (t.job && (
+            (node.id === 'pve-node-01' && (t.job.toLowerCase().includes('lab-ti') || t.job.toLowerCase().includes('informatika'))) ||
+            (node.id === 'pve-node-02' && (t.job.toLowerCase().includes('dekanat') || t.job.includes('77.29'))) ||
+            (node.id === 'pve-node-03' && (t.job.toLowerCase().includes('teknik') || t.job.toLowerCase().includes('fatek') || t.job.includes('77.30'))) ||
+            (node.id === 'pve-node-04' && (t.job.toLowerCase().includes('simlitabmas') || t.job.includes('77.99')))
+          ))
       );
+
+      const isExporterDown =
+        exporterNodeDownMap[node.id] === true ||
+        (node.id === 'pve-node-01' && (exporterNodeDownMap['node-01'] || exporterNodeDownMap['pve-node-01']));
+
       if (matched) {
         if (matched.instanceIp) node.ip = matched.instanceIp;
         if (matched.nodeName) node.name = matched.nodeName;
         if (matched.isPaused) {
           node.status = 'warning';
           node.uptime = 'Dijeda (Paused)';
-        } else if (matched.state === 'DOWN') {
-          node.status = 'offline';
-          node.uptime = 'Host Offline (Down)';
-          node.cpuUsage = 0;
-          node.ramUsage = 0;
-          node.ramUsedGb = 0;
-          node.vmsRunning = 0;
+          return;
         }
+      }
+
+      const isTargetMarkedDown = matched && (
+        matched.state === 'DOWN' ||
+        (matched as any).health === 'down' ||
+        (matched as any).status === 'down' ||
+        (matched as any).status === 'offline'
+      );
+
+      if (isTargetMarkedDown || isExporterDown) {
+        node.status = 'offline';
+        node.uptime = 'Host Down (Unreachable / Scrape Timeout)';
+        node.cpuUsage = 0;
+        node.ramUsage = 0;
+        node.ramUsedGb = 0;
+        node.storageUsage = 0;
+        node.vmsRunning = 0;
       }
     });
 
     // Strictly return the 4 authentic Proxmox VE Nodes of the cluster
     return baseNodes;
-  }, [hubServerTargets]);
+  }, [hubServerTargets, exporterNodeDownMap]);
 
   // Dynamic VM List parsed directly from Proxmox Exporter raw metrics text
   const dynamicPve01Vms = useMemo(() => {
@@ -2138,41 +2181,67 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
       proxmoxNodes.filter((n) => n.status === 'offline').map((n) => n.id)
     );
 
-    const markVmsForOfflineHosts = (vms: VmContainerItem[], hostId: string) => {
-      if (!offlineHostIds.has(hostId)) return vms;
-      return vms.map((v) => ({
-        ...v,
-        status: 'stopped' as const,
-        actualCpuUsage: 0,
-        actualRamUsedGb: 0,
-        uptime: '0m (Host Down)',
-      }));
-    };
+    const n1 = parsedNode01.length > 0 ? parsedNode01 : defaultNode01Vms;
+    const n2 = parsedNode02.length > 0 ? parsedNode02 : defaultNode02Vms;
+    const n3 = parsedNode03.length > 0 ? parsedNode03 : defaultNode03Vms;
+    const n4 = parsedNode04.length > 0 ? parsedNode04 : defaultNode04Vms;
 
-    const n1 = markVmsForOfflineHosts(parsedNode01.length > 0 ? parsedNode01 : defaultNode01Vms, 'pve-node-01');
-    const n2 = markVmsForOfflineHosts(parsedNode02.length > 0 ? parsedNode02 : defaultNode02Vms, 'pve-node-02');
-    const n3 = markVmsForOfflineHosts(parsedNode03.length > 0 ? parsedNode03 : defaultNode03Vms, 'pve-node-03');
-    const n4 = markVmsForOfflineHosts(parsedNode04.length > 0 ? parsedNode04 : defaultNode04Vms, 'pve-node-04');
-
-    return [...n1, ...n2, ...n3, ...n4];
+    return [...n1, ...n2, ...n3, ...n4].map((vm) => {
+      if (offlineHostIds.has(vm.proxmoxHost)) {
+        return {
+          ...vm,
+          status: 'stopped' as const,
+          uptime: 'Host Down (Unreachable)',
+          actualCpuUsage: 0,
+          actualRamUsedGb: 0,
+          diskReadMbps: 0,
+          diskWriteMbps: 0,
+          networkRxMbps: 0,
+          networkTxMbps: 0,
+          services: vm.services.map((s) => ({
+            ...s,
+            status: 'stopped' as const,
+            cpu: 0,
+            ram: '0MB',
+          })),
+        };
+      }
+      return vm;
+    });
   }, [dynamicPve01Vms, proxmoxNodes]);
 
   // Per-node VM health & offline status mapping
   const nodeStats = useMemo(() => {
-    const stats: Record<string, { total: number; running: number; stopped: number; stoppedVms: VmContainerItem[] }> = {};
+    const stats: Record<string, { total: number; running: number; stopped: number; stoppedVms: VmContainerItem[]; isHostDown?: boolean }> = {};
     proxmoxNodes.forEach((node) => {
       const vms = vmList.filter((v) => v.proxmoxHost === node.id);
-      const stopped = vms.filter((v) => v.status === 'stopped');
-      const running = vms.filter((v) => v.status === 'running');
-      stats[node.id] = {
-        total: vms.length,
-        running: running.length,
-        stopped: stopped.length,
-        stoppedVms: stopped,
-      };
+      if (node.status === 'offline') {
+        stats[node.id] = {
+          total: vms.length || node.vmsTotal,
+          running: 0,
+          stopped: vms.length || node.vmsTotal,
+          stoppedVms: vms,
+          isHostDown: true,
+        };
+      } else {
+        const stopped = vms.filter((v) => v.status === 'stopped');
+        const running = vms.filter((v) => v.status === 'running');
+        stats[node.id] = {
+          total: vms.length,
+          running: running.length,
+          stopped: stopped.length,
+          stoppedVms: stopped,
+          isHostDown: false,
+        };
+      }
     });
     return stats;
   }, [proxmoxNodes, vmList]);
+
+  // Offline physical hosts in cluster
+  const offlineNodes = useMemo(() => {
+    return proxmoxNodes.filter((n) => n.status === 'offline');
+  }, [proxmoxNodes]);
 
   // Global stopped VMs across the entire cluster
   const globalStoppedVms = useMemo(() => {
@@ -2558,8 +2627,45 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
         </div>
       )}
 
-      {/* Global Offline Alert Banner if any VM is stopped */}
-      {globalStoppedVms.length > 0 && (
+      {/* Critical Proxmox Host Down Alert Banner */}
+      {offlineNodes.length > 0 && (
+        <div className="p-4 bg-gradient-to-r from-rose-950/95 via-slate-900 to-rose-950/95 border-2 border-rose-500 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-200 text-xs font-mono shadow-2xl shadow-rose-950/80 animate-in fade-in">
+          <div className="flex items-center gap-3">
+            <div className="p-2.5 bg-rose-500/25 rounded-xl text-rose-300 border border-rose-500/50 animate-pulse flex-shrink-0">
+              <AlertOctagon className="w-6 h-6 text-rose-400" />
+            </div>
+            <div>
+              <div className="font-bold text-rose-100 text-sm flex items-center gap-2 flex-wrap">
+                <span>🚨 KRITIKAL: DETEKSI HOST SERVER PROXMOX DOWN (OFFLINE)</span>
+                <span className="px-2.5 py-0.5 rounded-full bg-rose-600 text-white text-[10px] uppercase font-extrabold border border-rose-400 animate-pulse">
+                  🔴 {offlineNodes.length} HOST DOWN
+                </span>
+              </div>
+              <div className="text-[11px] text-rose-200/90 font-sans mt-0.5 leading-relaxed">
+                Host Server fisik tidak merespon koneksi scraper ({offlineNodes.map((n) => `${n.name} [IP: ${n.ip}]`).join(', ')}). Di tab <strong className="text-white underline">Data Source & Scrape</strong> status target terkonfirmasi 🔴 <strong className="text-rose-300">DOWN</strong>. Seluruh VM / Container pada node ini berstatus OFFLINE (0 Active).
+              </div>
+            </div>
+          </div>
+          <button
+            onClick={() => {
+              const firstOff = offlineNodes[0];
+              if (firstOff) {
+                setSelectedPveId(firstOff.id);
+                const firstVm = vmList.find((v) => v.proxmoxHost === firstOff.id);
+                if (firstVm) setSelectedVmId(firstVm.id);
+                setViewMode('hierarchical');
+              }
+            }}
+            className="px-4 py-2 bg-rose-600 hover:bg-rose-500 text-white font-bold rounded-xl text-xs transition flex-shrink-0 shadow-lg flex items-center gap-1.5 self-end sm:self-auto border border-rose-400"
+          >
+            <span>Inspeksi Node Down</span>
+            <ArrowUpRight className="w-3.5 h-3.5" />
+          </button>
+        </div>
+      )}
+
+      {/* Global Offline Alert Banner if any VM is stopped on active nodes */}
+      {globalStoppedVms.length > 0 && offlineNodes.length === 0 && (
         <div className="p-3.5 bg-rose-950/80 border-2 border-rose-500/80 rounded-2xl flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-200 text-xs font-mono shadow-xl shadow-rose-950/50 animate-in fade-in">
           <div className="flex items-center gap-3">
             <div className="p-2 bg-rose-500/20 rounded-xl text-rose-400 border border-rose-500/40 animate-pulse flex-shrink-0">
@@ -2637,8 +2743,15 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
               barRam: 'bg-yellow-400',
               pillBg: 'bg-amber-500/15 text-amber-300 border-amber-500/30',
             };
-            const nStats = nodeStats[pve.id] || { total: pve.vmsTotal, running: pve.vmsRunning, stopped: 0, stoppedVms: [] };
-            const hasStopped = nStats.stopped > 0;
+            const isHostDown = pve.status === 'offline';
+            const nStats = nodeStats[pve.id] || {
+              total: pve.vmsTotal,
+              running: isHostDown ? 0 : pve.vmsRunning,
+              stopped: isHostDown ? pve.vmsTotal : 0,
+              stoppedVms: [],
+              isHostDown,
+            };
+            const hasStopped = nStats.stopped > 0 || isHostDown;
 
             return (
               <div
@@ -2649,7 +2762,9 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                   if (firstVm) setSelectedVmId(firstVm.id);
                 }}
                 className={`p-3.5 rounded-xl border cursor-pointer transition relative overflow-hidden ${
-                  hasStopped
+                  isHostDown
+                    ? 'bg-gradient-to-b from-rose-950/70 via-slate-900 to-slate-950 border-rose-500 shadow-xl shadow-rose-950/60 ring-2 ring-rose-500/80'
+                    : hasStopped
                     ? 'bg-slate-900/90 border-rose-500/80 shadow-lg shadow-rose-950/40 ring-1 ring-rose-500/60'
                     : isSelected
                     ? `${theme.cardActiveBg} ${theme.cardActiveBorder} ${theme.cardActiveRing} ${theme.cardActiveShadow}`
@@ -2658,13 +2773,13 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
               >
                 <div className="flex items-center justify-between mb-2">
                   <div className="flex items-center gap-2">
-                    <div className={`w-2.5 h-2.5 rounded-full ${hasStopped ? 'bg-rose-500 animate-ping' : pve.status === 'online' ? `${theme.barCpu} animate-pulse` : 'bg-amber-400'}`} />
+                    <div className={`w-2.5 h-2.5 rounded-full ${isHostDown || hasStopped ? 'bg-rose-500 animate-ping' : pve.status === 'online' ? `${theme.barCpu} animate-pulse` : 'bg-amber-400'}`} />
                     <span className="font-bold text-xs text-slate-100 font-mono">{pve.name}</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    {pve.status === 'offline' ? (
-                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-600/30 text-rose-300 border border-rose-500 flex items-center gap-1 animate-pulse shadow-sm">
-                        <AlertOctagon className="w-3 h-3 text-rose-400" />
+                    {isHostDown ? (
+                      <span className="px-1.5 py-0.5 rounded text-[10px] font-mono font-extrabold bg-rose-600 text-white border border-rose-400 flex items-center gap-1 animate-pulse shadow-md">
+                        <AlertOctagon className="w-3 h-3 text-white" />
                         <span>HOST DOWN</span>
                       </span>
                     ) : hasStopped ? (
@@ -2684,23 +2799,44 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                 <div className="text-[11px] text-slate-400 font-mono mb-2 flex justify-between items-center">
                   <span>IP: {pve.ip}</span>
                   <div className="flex items-center gap-1 font-bold">
-                    <span className={pve.status === 'offline' ? 'text-rose-400 font-extrabold' : hasStopped ? 'text-rose-300' : theme.accentText}>
-                      {pve.status === 'offline' ? `0/${nStats.total} VMs` : `${nStats.running}/${nStats.total} VMs`}
-                    </span>
-                    {pve.status === 'offline' ? (
-                      <span className="text-rose-400 text-[10px] font-extrabold animate-pulse bg-rose-500/20 px-1 rounded border border-rose-500/50">
-                        🔴 ALL OFFLINE
+                    <span className={hasStopped ? 'text-rose-300' : theme.accentText}>{nStats.running}/{nStats.total} VMs</span>
+                    {isHostDown ? (
+                      <span className="text-white text-[10px] font-extrabold animate-pulse bg-rose-600 px-1.5 py-0.5 rounded border border-rose-400">
+                        🔴 HOST DOWN
                       </span>
-                    ) : hasStopped && (
+                    ) : hasStopped ? (
                       <span className="text-rose-400 text-[10px] font-extrabold animate-pulse bg-rose-500/10 px-1 rounded border border-rose-500/30">
                         🔴 {nStats.stopped} OFFLINE
                       </span>
-                    )}
+                    ) : null}
                   </div>
                 </div>
 
-                {/* Stopped VMs preview overlay list on outer card */}
-                {hasStopped && (
+                {/* Stopped VMs / Host Down preview overlay list on outer card */}
+                {isHostDown ? (
+                  <div className="mb-2 p-2.5 rounded-lg bg-rose-950/90 border border-rose-500 text-[10px] font-mono text-rose-200">
+                    <div className="font-bold text-rose-100 mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1">
+                        <AlertOctagon className="w-3.5 h-3.5 text-rose-400 animate-pulse" /> HOST SERVER OFFLINE:
+                      </span>
+                      <span className="text-[9px] text-rose-300 font-bold underline">Scrape DOWN</span>
+                    </div>
+                    <div className="text-[10px] text-rose-300/90 mb-1.5 leading-snug">
+                      Host fisik {pve.ip} tidak dapat dijangkau. Seluruh {nStats.total} VM & LXC otomatis offline.
+                    </div>
+                    {nStats.stoppedVms.slice(0, 3).map((v) => (
+                      <div key={v.id} className="text-rose-200 font-semibold truncate pl-1 flex items-center gap-1">
+                        <span className="w-1.5 h-1.5 rounded-full bg-rose-500 flex-shrink-0"></span>
+                        <span>[VM {v.vmid}] {v.name} (OFFLINE)</span>
+                      </div>
+                    ))}
+                    {nStats.stoppedVms.length > 3 && (
+                      <div className="text-[9px] text-rose-300 pl-2.5 font-bold pt-0.5">
+                        + {nStats.stoppedVms.length - 3} VM lainnya offline...
+                      </div>
+                    )}
+                  </div>
+                ) : hasStopped ? (
                   <div className="mb-2 p-2 rounded-lg bg-rose-950/70 border border-rose-500/40 text-[10px] font-mono text-rose-200">
                     <div className="font-bold text-rose-300 mb-1 flex items-center justify-between">
                       <span className="flex items-center gap-1">
@@ -2715,45 +2851,51 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                       </div>
                     ))}
                   </div>
-                )}
+                ) : null}
 
                 {/* CPU, RAM & Storage Bar */}
                 <div className="space-y-1.5 text-[10px] font-mono">
                   <div>
                     <div className="flex justify-between text-slate-400 mb-0.5">
                       <span>CPU Load ({pve.cpuCores} Cores)</span>
-                      <span className="text-slate-200 font-bold">{pve.cpuUsage}%</span>
+                      <span className={`font-bold ${isHostDown ? 'text-rose-400' : 'text-slate-200'}`}>
+                        {isHostDown ? '0% (Offline)' : `${pve.cpuUsage}%`}
+                      </span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${pve.cpuUsage > 80 ? 'bg-rose-500' : theme.barCpu}`}
-                        style={{ width: `${pve.cpuUsage}%` }}
+                        className={`h-full rounded-full ${isHostDown ? 'bg-rose-500/30' : pve.cpuUsage > 80 ? 'bg-rose-500' : theme.barCpu}`}
+                        style={{ width: `${isHostDown ? 0 : pve.cpuUsage}%` }}
                       />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-slate-400 mb-0.5">
-                      <span>RAM ({pve.ramUsedGb}/{pve.ramTotalGb} GB)</span>
-                      <span className="text-slate-200 font-bold">{pve.ramUsage}%</span>
+                      <span>RAM ({isHostDown ? 0 : pve.ramUsedGb}/{pve.ramTotalGb} GB)</span>
+                      <span className={`font-bold ${isHostDown ? 'text-rose-400' : 'text-slate-200'}`}>
+                        {isHostDown ? '0% (Offline)' : `${pve.ramUsage}%`}
+                      </span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${pve.ramUsage > 80 ? 'bg-rose-500' : theme.barRam}`}
-                        style={{ width: `${pve.ramUsage}%` }}
+                        className={`h-full rounded-full ${isHostDown ? 'bg-rose-500/30' : pve.ramUsage > 80 ? 'bg-rose-500' : theme.barRam}`}
+                        style={{ width: `${isHostDown ? 0 : pve.ramUsage}%` }}
                       />
                     </div>
                   </div>
 
                   <div>
                     <div className="flex justify-between text-slate-400 mb-0.5">
-                      <span>HD Storage ({pve.storageUsedGb ? (pve.storageUsedGb >= 1000 ? `${(pve.storageUsedGb / 1024).toFixed(2)} TiB` : `${pve.storageUsedGb} GB`) : `${pve.storageUsage}%`} / {pve.storageTotalTb} TiB)</span>
-                      <span className="text-slate-200 font-bold">{pve.storageUsage}%</span>
+                      <span>HD Storage ({isHostDown ? 'Offline' : pve.storageUsedGb ? (pve.storageUsedGb >= 1000 ? `${(pve.storageUsedGb / 1024).toFixed(2)} TiB` : `${pve.storageUsedGb} GB`) : `${pve.storageUsage}%`} / {pve.storageTotalTb} TiB)</span>
+                      <span className={`font-bold ${isHostDown ? 'text-rose-400' : 'text-slate-200'}`}>
+                        {isHostDown ? 'N/A' : `${pve.storageUsage}%`}
+                      </span>
                     </div>
                     <div className="w-full bg-slate-800 rounded-full h-1.5 overflow-hidden">
                       <div
-                        className={`h-full rounded-full ${pve.storageUsage > 85 ? 'bg-rose-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`}
-                        style={{ width: `${Math.max(2, pve.storageUsage)}%` }}
+                        className={`h-full rounded-full ${isHostDown ? 'bg-rose-500/30' : pve.storageUsage > 85 ? 'bg-rose-500' : 'bg-gradient-to-r from-teal-500 to-emerald-400'}`}
+                        style={{ width: `${isHostDown ? 0 : Math.max(2, pve.storageUsage)}%` }}
                       />
                     </div>
                   </div>
@@ -2909,16 +3051,21 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                 return (
                   <>
                     {/* Level 1: Proxmox Host Select (lg:col-span-4) */}
-                    <div className={`lg:col-span-4 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border transition-all duration-300 ${currentPveTheme.cardBorder}`}>
+                    <div className={`lg:col-span-4 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border transition-all duration-300 ${
+                      activePveNode.status === 'offline'
+                        ? 'border-rose-500/80 bg-gradient-to-b from-rose-950/60 via-slate-950 to-slate-950 shadow-lg shadow-rose-950/40'
+                        : currentPveTheme.cardBorder
+                    }`}>
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-[11px] font-mono font-bold uppercase tracking-wide flex items-center gap-1.5 text-slate-200">
-                            <span className={`w-2 h-2 rounded-full ${currentPveTheme.dot} animate-pulse`}></span>
+                            <span className={`w-2 h-2 rounded-full ${activePveNode.status === 'offline' ? 'bg-rose-500 animate-ping' : `${currentPveTheme.dot} animate-pulse`}`}></span>
                             <span>1. Proxmox Node (Host)</span>
                           </label>
                           {activePveNode.status === 'offline' ? (
-                            <span className="px-1.5 py-0.5 rounded bg-rose-600/30 text-rose-300 border border-rose-500 text-[10px] font-mono font-bold flex items-center gap-1 animate-pulse">
-                              🔴 HOST DOWN
+                            <span className="px-2 py-0.5 rounded bg-rose-600 text-white border border-rose-400 text-[10px] font-mono font-bold flex items-center gap-1 animate-pulse">
+                              <AlertOctagon className="w-3 h-3 text-white" />
+                              <span>🔴 HOST DOWN</span>
                             </span>
                           ) : nodeStats[activePveNode.id]?.stopped > 0 ? (
                             <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/40 text-[10px] font-mono font-bold flex items-center gap-1">
@@ -2939,20 +3086,23 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                               const firstVm = vmList.find((v) => v.proxmoxHost === e.target.value);
                               if (firstVm) setSelectedVmId(firstVm.id);
                             }}
-                            className={`w-full font-mono text-xs rounded-lg px-3 py-2.5 focus:outline-none cursor-pointer appearance-none pr-8 border transition-all ${currentPveTheme.selectStyle}`}
+                            className={`w-full font-mono text-xs rounded-lg px-3 py-2.5 focus:outline-none cursor-pointer appearance-none pr-8 border transition-all ${
+                              activePveNode.status === 'offline'
+                                ? 'bg-rose-950/90 border-rose-500/80 text-rose-100 font-bold'
+                                : currentPveTheme.selectStyle
+                            }`}
                           >
                             {proxmoxNodes.map((p) => {
-                              const isNodeOffline = p.status === 'offline';
-                              const sCount = isNodeOffline ? (nodeStats[p.id]?.total || p.vmsTotal) : (nodeStats[p.id]?.stopped || 0);
-                              const runningCount = isNodeOffline ? 0 : (nodeStats[p.id]?.running || p.vmsRunning);
+                              const isOff = p.status === 'offline';
+                              const sCount = nodeStats[p.id]?.stopped || 0;
                               const optTheme = getNodeStyles(p.id);
                               return (
                                 <option
                                   key={p.id}
                                   value={p.id}
-                                  className={isNodeOffline ? 'bg-rose-950 text-rose-300 font-bold' : optTheme.optionClass}
+                                  className={isOff ? 'bg-rose-950 text-rose-200 font-bold' : optTheme.optionClass}
                                 >
-                                  {p.name} ({p.ip}) — {runningCount}/{nodeStats[p.id]?.total || p.vmsTotal} VMs {isNodeOffline ? '[🔴 HOST DOWN]' : sCount > 0 ? `[🔴 ${sCount} OFFLINE]` : ''}
+                                  {p.name} ({p.ip}) — {isOff ? '[🔴 HOST DOWN / OFFLINE]' : `${nodeStats[p.id]?.running || p.vmsRunning}/${nodeStats[p.id]?.total || p.vmsTotal} VMs ${sCount > 0 ? `[🔴 ${sCount} OFFLINE]` : ''}`}
                                 </option>
                               );
                             })}
@@ -2963,25 +3113,31 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
 
                       <div className="text-[11px] text-slate-300 font-mono flex items-center justify-between pt-1.5 border-t border-slate-800/80">
                         <span>IP: <strong className="text-white font-bold">{activePveNode.ip}</strong></span>
-                        <span>VMs: <strong className={activePveNode.status === 'offline' ? 'text-rose-400 font-bold' : currentPveTheme.accentText}>
-                          {activePveNode.status === 'offline' ? `0/${nodeStats[activePveNode.id]?.total || 0} (HOST DOWN)` : `${nodeStats[activePveNode.id]?.running || 0}/${nodeStats[activePveNode.id]?.total || 0} Active`}
-                        </strong></span>
+                        <span>
+                          VMs: <strong className={activePveNode.status === 'offline' ? 'text-rose-400 font-bold' : currentPveTheme.accentText}>
+                            {activePveNode.status === 'offline'
+                              ? '0 Active (🔴 HOST DOWN)'
+                              : `${nodeStats[activePveNode.id]?.running || 0}/${nodeStats[activePveNode.id]?.total || 0} Active`}
+                          </strong>
+                        </span>
                       </div>
                     </div>
 
                     {/* Level 2: Target VM / LXC Select (lg:col-span-4) */}
                     <div className={`lg:col-span-4 rounded-xl p-3.5 flex flex-col justify-between gap-2.5 border transition-all duration-300 ${
-                      activeVm?.status === 'stopped'
+                      activeVm?.status === 'stopped' || activePveNode.status === 'offline'
                         ? 'border-rose-500/70 bg-gradient-to-b from-rose-950/50 via-slate-950 to-slate-950 shadow-lg shadow-rose-950/30'
                         : currentPveTheme.cardBorder
                     }`}>
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
                           <label className="text-[11px] font-mono font-bold uppercase tracking-wide flex items-center gap-1.5 text-slate-200">
-                            <span className={`w-2 h-2 rounded-full ${activeVm?.status === 'stopped' ? 'bg-rose-500' : currentPveTheme.dot}`}></span>
+                            <span className={`w-2 h-2 rounded-full ${activeVm?.status === 'stopped' || activePveNode.status === 'offline' ? 'bg-rose-500' : currentPveTheme.dot}`}></span>
                             <span>2. Target VM / LXC Container</span>
                           </label>
-                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${currentPveTheme.badgeBg}`}>
+                          <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded border ${
+                            activePveNode.status === 'offline' ? 'bg-rose-500/20 text-rose-300 border-rose-500/40' : currentPveTheme.badgeBg
+                          }`}>
                             {nodeVmChildren.length} Discovered
                           </span>
                         </div>
@@ -2991,20 +3147,23 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                             value={selectedVmId}
                             onChange={(e) => setSelectedVmId(e.target.value)}
                             className={`w-full font-mono text-xs rounded-lg px-3 py-2.5 focus:outline-none cursor-pointer appearance-none pr-8 transition-all border ${
-                              activeVm?.status === 'stopped'
+                              activeVm?.status === 'stopped' || activePveNode.status === 'offline'
                                 ? 'bg-rose-950/90 border-rose-500/80 text-rose-200 font-bold focus:border-rose-400'
                                 : currentPveTheme.selectStyle
                             }`}
                           >
-                            {nodeVmChildren.map((v) => (
-                              <option
-                                key={v.id}
-                                value={v.id}
-                                className={v.status === 'stopped' ? 'bg-rose-950 text-rose-300 font-bold' : currentPveTheme.optionClass}
-                              >
-                                [VM {v.vmid}] {v.name} ({v.type.toUpperCase()} • {v.ip}) {v.status === 'stopped' ? '🔴 OFFLINE' : '🟢 RUNNING'}
-                              </option>
-                            ))}
+                            {nodeVmChildren.map((v) => {
+                              const isHostOff = activePveNode.status === 'offline';
+                              return (
+                                <option
+                                  key={v.id}
+                                  value={v.id}
+                                  className={v.status === 'stopped' || isHostOff ? 'bg-rose-950 text-rose-300 font-bold' : currentPveTheme.optionClass}
+                                >
+                                  [VM {v.vmid}] {v.name} ({v.type.toUpperCase()} • {v.ip}) {isHostOff ? '🔴 OFFLINE (HOST DOWN)' : v.status === 'stopped' ? '🔴 OFFLINE' : '🟢 RUNNING'}
+                                </option>
+                              );
+                            })}
                           </select>
                           <ChevronDown className="w-4 h-4 text-slate-300 absolute right-2.5 top-3 pointer-events-none" />
                         </div>
@@ -3012,7 +3171,11 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
 
                       <div className="text-[11px] text-slate-300 font-mono flex items-center justify-between pt-1.5 border-t border-slate-800/80">
                         <span>Tipe: <strong className="text-white uppercase font-bold">{activeVm?.type || 'QEMU'}</strong></span>
-                        <span>Status: <strong className={activeVm?.status === 'stopped' ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>{activeVm?.status === 'stopped' ? '🔴 OFFLINE' : '🟢 RUNNING'}</strong></span>
+                        <span>
+                          Status: <strong className={activeVm?.status === 'stopped' || activePveNode.status === 'offline' ? 'text-rose-400 font-bold' : 'text-emerald-400 font-bold'}>
+                            {activePveNode.status === 'offline' ? '🔴 OFFLINE (HOST DOWN)' : activeVm?.status === 'stopped' ? '🔴 OFFLINE' : '🟢 RUNNING'}
+                          </strong>
+                        </span>
                       </div>
                     </div>
                   </>
@@ -3022,34 +3185,38 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
               {/* Section 3: Active Selected VM Quick Detail Badge (lg:col-span-4) */}
               {activeVm ? (
                 <div className={`lg:col-span-4 rounded-xl border p-3.5 flex flex-col justify-between transition ${
-                  activeVm.status === 'stopped'
+                  activeVm.status === 'stopped' || activePveNode.status === 'offline'
                     ? 'bg-rose-950/40 border-rose-500/60 text-rose-200'
                     : 'bg-slate-950 border-slate-800 text-slate-200'
                 }`}>
                   <div>
                     <div className="flex items-center justify-between gap-2 mb-1.5">
                       <div className="flex items-center gap-1.5 min-w-0">
-                        <Cpu className={`w-4 h-4 flex-shrink-0 ${activeVm.status === 'stopped' ? 'text-rose-400' : activeTheme.accentText}`} />
+                        <Cpu className={`w-4 h-4 flex-shrink-0 ${activeVm.status === 'stopped' || activePveNode.status === 'offline' ? 'text-rose-400' : activeTheme.accentText}`} />
                         <span className="font-bold text-xs text-slate-100 font-mono truncate" title={`VMID ${activeVm.vmid}: ${activeVm.name}`}>
                           [{activeVm.vmid}] {activeVm.name}
                         </span>
                       </div>
                       <span className={`px-2 py-0.5 rounded text-[10px] uppercase font-mono font-bold border flex-shrink-0 flex items-center gap-1 ${
-                        activeVm.status === 'stopped'
+                        activePveNode.status === 'offline'
+                          ? 'bg-rose-600 text-white border-rose-400'
+                          : activeVm.status === 'stopped'
                           ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
                           : activeVm.status === 'warning'
                           ? 'bg-amber-500/20 text-amber-300 border-amber-500/40'
                           : 'bg-emerald-500/20 text-emerald-400 border-emerald-500/40'
                       }`}>
-                        <span className={`w-1.5 h-1.5 rounded-full ${activeVm.status === 'stopped' ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
-                        {activeVm.status === 'stopped' ? '🔴 OFF' : activeVm.status.toUpperCase()}
+                        <span className={`w-1.5 h-1.5 rounded-full ${activeVm.status === 'stopped' || activePveNode.status === 'offline' ? 'bg-rose-500' : 'bg-emerald-400 animate-pulse'}`} />
+                        {activePveNode.status === 'offline' ? '🔴 HOST OFFLINE' : activeVm.status === 'stopped' ? '🔴 OFF' : activeVm.status.toUpperCase()}
                       </span>
                     </div>
 
                     <div className="text-[11px] text-slate-400 font-mono space-y-0.5">
                       <div className="flex justify-between">
                         <span>Host Node:</span>
-                        <span className={`font-bold ${activeTheme.accentText}`}>{activeVm.proxmoxHost}</span>
+                        <span className={`font-bold ${activePveNode.status === 'offline' ? 'text-rose-400' : activeTheme.accentText}`}>
+                          {activeVm.proxmoxHost} {activePveNode.status === 'offline' ? '(DOWN)' : ''}
+                        </span>
                       </div>
                       <div className="flex justify-between">
                         <span>IP Address:</span>
@@ -3063,8 +3230,8 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
                   </div>
 
                   <div className="flex items-center justify-between pt-1.5 border-t border-slate-800/60 text-[10px] font-mono text-slate-400">
-                    <span>CPU: {activeVm.allocatedCpuCores} Cores ({activeVm.actualCpuUsage}%)</span>
-                    <span>RAM: {activeVm.actualRamUsedGb}/{activeVm.allocatedRamGb} GB</span>
+                    <span>CPU: {activeVm.allocatedCpuCores} Cores ({activePveNode.status === 'offline' ? 0 : activeVm.actualCpuUsage}%)</span>
+                    <span>RAM: {activePveNode.status === 'offline' ? 0 : activeVm.actualRamUsedGb}/{activeVm.allocatedRamGb} GB</span>
                   </div>
                 </div>
               ) : (
@@ -3109,27 +3276,33 @@ pve_node_info{id="node/fatek",level="",name="fatek",nodeid="0"} 1.0`);
               </div>
 
               {/* OFF / STOPPED Notification Banner */}
-              {activeVm.status === 'stopped' && (
-                <div className="bg-rose-950/50 border-2 border-rose-500/50 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-200 font-mono text-xs shadow-lg shadow-rose-950/50">
+              {(activeVm.status === 'stopped' || activePveNode.status === 'offline') && (
+                <div className="bg-rose-950/70 border-2 border-rose-500 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-rose-200 font-mono text-xs shadow-xl shadow-rose-950/50">
                   <div className="flex items-center gap-3">
-                    <div className="p-2.5 bg-rose-500/20 rounded-xl border border-rose-500/40 text-rose-400 animate-pulse">
-                      <AlertCircle className="w-6 h-6" />
+                    <div className="p-2.5 bg-rose-500/30 rounded-xl border border-rose-400 text-rose-300 animate-pulse flex-shrink-0">
+                      <AlertOctagon className="w-6 h-6" />
                     </div>
                     <div className="space-y-0.5">
-                      <div className="font-bold text-rose-200 text-sm flex items-center gap-2">
-                        <span>⚠️ STATUS SERVER / VM: OFF (STOPPED / OFFLINE)</span>
-                        <span className="px-2 py-0.5 text-[9px] bg-rose-500/30 text-rose-100 border border-rose-500/40 rounded font-bold uppercase">
-                          pve_up = 0
+                      <div className="font-bold text-rose-100 text-sm flex items-center gap-2 flex-wrap">
+                        <span>
+                          {activePveNode.status === 'offline'
+                            ? '🚨 HOST PROXMOX DOWN: SELURUH VM & LAYANAN MATI'
+                            : '⚠️ STATUS SERVER / VM: OFF (STOPPED / OFFLINE)'}
+                        </span>
+                        <span className="px-2 py-0.5 text-[9px] bg-rose-600 text-white border border-rose-400 rounded font-bold uppercase">
+                          {activePveNode.status === 'offline' ? 'HOST UNREACHABLE' : 'pve_up = 0'}
                         </span>
                       </div>
-                      <p className="text-rose-200/80 text-[11px]">
-                        Virtual Machine/Container <strong className="text-white font-bold">[{activeVm.vmid}] {activeVm.name}</strong> ({activeVm.ip}) sedang tidak aktif / offline. Metrik penggunaan CPU/RAM/Net berada dalam posisi idle/nol.
+                      <p className="text-rose-200/90 text-[11px] leading-relaxed">
+                        {activePveNode.status === 'offline'
+                          ? `Host fisik ${activePveNode.name} (${activePveNode.ip}) sedang DOWN / tidak merespon koneksi scraper. VM [${activeVm.vmid}] ${activeVm.name} dan seluruh VM lainnya tidak aktif.`
+                          : `Virtual Machine/Container [${activeVm.vmid}] ${activeVm.name} (${activeVm.ip}) sedang tidak aktif / offline. Metrik penggunaan CPU/RAM/Net berada dalam posisi idle/nol.`}
                       </p>
                     </div>
                   </div>
-                  <div className="px-3 py-1.5 bg-rose-900/80 border border-rose-600/60 rounded-xl text-[11px] text-rose-100 font-bold flex items-center gap-1.5 whitespace-nowrap self-stretch sm:self-auto justify-center">
-                    <span className="w-2 h-2 rounded-full bg-rose-400 animate-ping"></span>
-                    SERVER OFF
+                  <div className="px-3.5 py-2 bg-rose-600 border border-rose-400 rounded-xl text-[11px] text-white font-extrabold flex items-center gap-2 whitespace-nowrap self-stretch sm:self-auto justify-center shadow-md">
+                    <span className="w-2.5 h-2.5 rounded-full bg-white animate-ping"></span>
+                    <span>{activePveNode.status === 'offline' ? '🔴 HOST OFFLINE' : 'SERVER OFF'}</span>
                   </div>
                 </div>
               )}

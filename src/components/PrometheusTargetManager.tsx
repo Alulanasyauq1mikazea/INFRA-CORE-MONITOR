@@ -235,21 +235,33 @@ export const PrometheusTargetManager: React.FC = () => {
     const job = String(jobName || '').toLowerCase();
 
     if (mod === 'mikrotik' || job.includes('mikrotik') || job.includes('snmp')) {
-      return ['routeros_cpu_load', 'routeros_memory_free_bytes', 'snmp_interface_rx_bytes'];
+      return ['mtxrInterfaceStatsDriverRxBytes', 'mtxrInterfaceStatsDriverTxBytes', 'ifHCInOctets', 'ifHCOutOctets'];
     }
-    if (mod === 'waf' || job.includes('crowdsec') || job.includes('waf') || job.includes('nginx')) {
-      return ['nginx_http_requests_total', 'crowdsec_decisions_active', 'rate_limit_blocked_total'];
+    if (job.includes('nginx')) {
+      return ['nginx_up', 'nginx_connections_active', 'nginx_connections_accepted', 'nginx_http_requests_total'];
+    }
+    if (job.includes('crowdsec')) {
+      return ['cs_active_decisions', 'cs_alerts_total', 'cs_lapi_requests_total'];
+    }
+    if (mod === 'waf') {
+      return ['nginx_http_requests_total', 'cs_active_decisions', 'cs_alerts_total'];
+    }
+    if (job.includes('blackbox')) {
+      return ['probe_success', 'probe_http_status_code', 'probe_duration_seconds', 'probe_ssl_earliest_cert_expiry'];
     }
     if (mod === 'website' || job.includes('kuma') || job.includes('uptime')) {
       return ['monitor_status', 'monitor_response_time', 'monitor_cert_days_remaining', 'monitor_cert_is_valid'];
     }
-    if (job.includes('blackbox')) {
-      return ['probe_success', 'probe_http_status_code', 'probe_duration_seconds'];
+    if (job.includes('proxmox') || job.includes('pve')) {
+      return ['pve_node_cpu_usage_ratio', 'pve_node_memory_used_bytes', 'pve_guest_status', 'pve_storage_used_bytes'];
     }
-    if (mod === 'system' || job.includes('prometheus')) {
-      return ['prometheus_http_requests_total', 'prometheus_build_info', 'prometheus_tsdb_head_samples_appended_total'];
+    if (job === 'prometheus' || job.includes('prometheus_server')) {
+      return ['prometheus_tsdb_head_samples_appended_total', 'prometheus_http_requests_total', 'prometheus_build_info'];
     }
-    return ['node_cpu_seconds_total', 'node_memory_MemTotal_bytes', 'node_network_receive_bytes_total'];
+    if (mod === 'system') {
+      return ['prometheus_http_requests_total', 'probe_success', 'prometheus_build_info'];
+    }
+    return ['node_cpu_seconds_total', 'node_memory_MemTotal_bytes', 'node_memory_MemAvailable_bytes', 'node_filesystem_free_bytes'];
   };
 
   const getStoredPausedMap = (): Record<string, boolean> => {
@@ -316,13 +328,25 @@ export const PrometheusTargetManager: React.FC = () => {
         );
       }
 
-      // If selected metrics contain mismatched node metrics for specialized targets, auto-correct
+      // If selected metrics contain mismatched metrics for specialized targets, auto-correct dynamically
       let selectedMetrics = raw.selectedMetrics;
-      const isWebsiteOrKuma = mappedModule === 'website' || jobLower === 'uptime-kuma-local' || jobLower.includes('uptime-kuma');
+      const isWebsiteOrKuma = mappedModule === 'website' || jobLower.includes('kuma') || jobLower.includes('uptime');
       const isBlackbox = jobLower.includes('blackbox');
+      const isPromServer = jobLower === 'prometheus' || jobLower.includes('prometheus_server');
+      const isNginx = jobLower.includes('nginx');
+      const isPve = jobLower.includes('proxmox') || jobLower.includes('pve');
       const hasNodeMetrics = Array.isArray(selectedMetrics) && selectedMetrics.some((m: string) => m.startsWith('node_'));
+      const hasCsMetrics = Array.isArray(selectedMetrics) && selectedMetrics.some((m: string) => m.startsWith('cs_'));
+      const hasBlackboxMetrics = Array.isArray(selectedMetrics) && selectedMetrics.some((m: string) => m.startsWith('probe_'));
 
-      if (!Array.isArray(selectedMetrics) || selectedMetrics.length === 0 || ((isWebsiteOrKuma || isBlackbox) && hasNodeMetrics)) {
+      const needsCorrection =
+        !Array.isArray(selectedMetrics) ||
+        selectedMetrics.length === 0 ||
+        ((isWebsiteOrKuma || isBlackbox || isPromServer || isPve) && hasNodeMetrics) ||
+        (isNginx && hasCsMetrics) ||
+        (isWebsiteOrKuma && hasBlackboxMetrics);
+
+      if (needsCorrection) {
         selectedMetrics = getModuleDefaultMetrics(mappedModule, job);
       }
 
