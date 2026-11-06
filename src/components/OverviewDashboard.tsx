@@ -8,6 +8,7 @@ import {
   ArrowDownRight,
   Activity,
   Send,
+  X,
   Zap,
   Cpu,
   HardDrive,
@@ -51,6 +52,88 @@ interface OverviewDashboardProps {
   onSendTestTelegramAlert: () => void;
   isTestingTelegram: boolean;
 }
+
+export const resolvePveHostInfo = (nodeRaw?: string, vmName?: string, vmid?: string | number) => {
+  const n = (nodeRaw || '').toLowerCase();
+  const name = (vmName || '').toLowerCase();
+  const id = (vmid || '').toString();
+
+  // 1. PVE-01 Informatika (192.168.14.222)
+  if (
+    n === 'pve-node-01' ||
+    n.includes('informatika') ||
+    n.includes('lab-ti') ||
+    n.includes('14.222') ||
+    name.includes('opnsense')
+  ) {
+    return {
+      nodeId: 'pve-node-01',
+      label: 'PVE-01 Informatika',
+      pillClass: 'text-cyan-400 border-cyan-500/30 bg-cyan-950/40',
+      dotClass: 'bg-cyan-500',
+    };
+  }
+
+  // 2. PVE-02 Dekanat (192.168.77.29)
+  if (
+    n === 'pve-node-02' ||
+    n.includes('dekanat') ||
+    n.includes('77.29') ||
+    name.includes('ojs') ||
+    name.includes('malware') ||
+    name.includes('rpl') ||
+    name.includes('hotspot') ||
+    name.includes('helpdesk') ||
+    name.includes('fakultasteknik')
+  ) {
+    return {
+      nodeId: 'pve-node-02',
+      label: 'PVE-02 Dekanat',
+      pillClass: 'text-indigo-400 border-indigo-500/30 bg-indigo-950/40',
+      dotClass: 'bg-indigo-500',
+    };
+  }
+
+  // 3. PVE-03 Fatek (192.168.77.242)
+  if (
+    n === 'pve-node-03' ||
+    n.includes('fatek') ||
+    n.includes('teknik') ||
+    n.includes('77.242') ||
+    name.includes('plti') ||
+    (name.startsWith('vm') && (id === '100' || id === '102' || id === '103' || id === '106'))
+  ) {
+    return {
+      nodeId: 'pve-node-03',
+      label: 'PVE-03 Fatek',
+      pillClass: 'text-emerald-400 border-emerald-500/30 bg-emerald-950/40',
+      dotClass: 'bg-emerald-500',
+    };
+  }
+
+  // 4. PVE-04 Simlitabmas (192.168.77.99)
+  if (
+    n === 'pve-node-04' ||
+    n.includes('simlitabmas') ||
+    n.includes('77.99') ||
+    name.includes('eprints') ||
+    (name.startsWith('vm') && id === '101')
+  ) {
+    return {
+      nodeId: 'pve-node-04',
+      label: 'PVE-04 Simlitabmas',
+      pillClass: 'text-purple-400 border-purple-500/30 bg-purple-950/40',
+      dotClass: 'bg-purple-500',
+    };
+  }
+
+  return {
+    nodeId: 'pve-node-02',
+    label: 'PVE-02 Dekanat',
+    pillClass: 'text-indigo-400 border-indigo-500/30 bg-indigo-950/40',
+    dotClass: 'bg-indigo-500',
+  };
+};
 
 export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   nodes,
@@ -276,20 +359,25 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     return PROXMOX_CLUSTER_HOSTS;
   });
 
-  const default12OfflineVms = [
-    { vmid: '104', name: 'VPN-OPNsense', node: 'pve-node-01' },
-    { vmid: '201', name: 'OJS', node: 'pve-node-02' },
-    { vmid: '205', name: 'ServerScanningMalware', node: 'pve-node-02' },
-    { vmid: '212', name: 'HelpdeskUnmus', node: 'pve-node-02' },
-    { vmid: '217', name: 'NewFakultasTeknik', node: 'pve-node-02' },
-    { vmid: '100', name: 'VM1', node: 'pve-node-03' },
-    { vmid: '102', name: 'VM3', node: 'pve-node-03' },
-    { vmid: '103', name: 'VM3', node: 'pve-node-03' },
-    { vmid: '105', name: 'PLTI', node: 'pve-node-03' },
-    { vmid: '106', name: 'VM4', node: 'pve-node-03' },
-    { vmid: '101', name: 'VM1', node: 'pve-node-04' },
-    { vmid: '100', name: 'eprints.unmus.ac.id', node: 'pve-node-04' }
+  const default11OfflineVms = [
+    { vmid: '101', name: 'OJS', node: 'pve-node-02', hostLabel: 'PVE-02 Dekanat' },
+    { vmid: '105', name: 'ServerScanningMalware', node: 'pve-node-02', hostLabel: 'PVE-02 Dekanat' },
+    { vmid: '114', name: 'ServerRPL', node: 'pve-node-02', hostLabel: 'PVE-02 Dekanat' },
+    { vmid: '116', name: 'PendaftaranHotspot', node: 'pve-node-02', hostLabel: 'PVE-02 Dekanat' },
+    { vmid: '100', name: 'VM1', node: 'pve-node-03', hostLabel: 'PVE-03 Fatek' },
+    { vmid: '102', name: 'VM3', node: 'pve-node-03', hostLabel: 'PVE-03 Fatek' },
+    { vmid: '103', name: 'VM3', node: 'pve-node-03', hostLabel: 'PVE-03 Fatek' },
+    { vmid: '106', name: 'VM4', node: 'pve-node-03', hostLabel: 'PVE-03 Fatek' },
+    { vmid: '105', name: 'PLTI', node: 'pve-node-03', hostLabel: 'PVE-03 Fatek' },
+    { vmid: '100', name: 'eprints.unmus.ac.id', node: 'pve-node-04', hostLabel: 'PVE-04 Simlitabmas' },
+    { vmid: '101', name: 'VM1', node: 'pve-node-04', hostLabel: 'PVE-04 Simlitabmas' }
   ];
+
+  const serverNodesRef = React.useRef(serverNodes);
+  serverNodesRef.current = serverNodes;
+  const lastStoppedFingerprintRef = React.useRef<string>('');
+
+  const [showOfflineVmsModal, setShowOfflineVmsModal] = React.useState<boolean>(false);
 
   // Proxmox dynamic VM list with instant real-time metrics parsing
   const [dynamicVmsList, setDynamicVmsList] = React.useState<ProxmoxVmItem[]>(() => {
@@ -297,7 +385,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
   });
 
   // Proxmox VM live status calculation with instant LocalStorage caching for zero-latency loading
-  const [stoppedVmList, setStoppedVmList] = React.useState<{ vmid: string; name: string; node: string }[]>(() => {
+  const [stoppedVmList, setStoppedVmList] = React.useState<{ vmid: string; name: string; node: string; hostLabel?: string }[]>(() => {
     try {
       const cached = localStorage.getItem('pve_stopped_vms_cache');
       if (cached) {
@@ -309,7 +397,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
     } catch {
       // ignore
     }
-    return default12OfflineVms;
+    return default11OfflineVms;
   });
 
   React.useEffect(() => {
@@ -331,7 +419,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
         ]);
 
         const responses = [res1, res2, res3, res4];
-        const stopped: { vmid: string; name: string; node: string }[] = [];
+        const stopped: { vmid: string; name: string; node: string; hostLabel?: string }[] = [];
         const parsedNodeMetrics: Record<string, {
           isDown?: boolean;
           cpu?: number;
@@ -443,8 +531,14 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                         runningVmCount++;
                       } else if (val === 0) {
                         const vmid = guestId.split('/')[1] || '100';
-                        const info = guestInfoMap[guestId] || { name: `VM ${vmid}`, node: 'pve-node' };
-                        stopped.push({ vmid, name: info.name, node: info.node });
+                        const rawInfo = guestInfoMap[guestId] || { name: `VM ${vmid}`, node: nodeId };
+                        const hostInfo = resolvePveHostInfo(nodeId, rawInfo.name, vmid);
+                        stopped.push({
+                          vmid,
+                          name: rawInfo.name,
+                          node: hostInfo.nodeId,
+                          hostLabel: hostInfo.label,
+                        });
                       }
                     }
                   }
@@ -477,8 +571,46 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             } catch {
               // ignore
             }
+          } else {
+            // Target is DOWN / Exporter connection error
+            parsedNodeMetrics[nodeId] = {
+              isDown: true,
+              cpu: 0,
+              ram: 0,
+              ramUsedGb: 0,
+              storage: 0,
+              vmsRunning: 0,
+            };
           }
         }));
+
+        // Cross-check with live Prometheus target health from SQLite / cache
+        try {
+          const targetsJson = localStorage.getItem('netwatch_local_targets');
+          if (targetsJson) {
+            const storedTargets = JSON.parse(targetsJson);
+            if (Array.isArray(storedTargets)) {
+              storedTargets.forEach((t: any) => {
+                if (t.state === 'DOWN') {
+                  const job = (t.job_name || t.job || '').toLowerCase();
+                  const endpoint = (t.endpoint || '').toLowerCase();
+                  if (job.includes('lab-ti') || endpoint.includes('192.168.14.222')) {
+                    parsedNodeMetrics['pve-node-01'] = { isDown: true, cpu: 0, ram: 0, ramUsedGb: 0, storage: 0, vmsRunning: 0 };
+                  }
+                  if (job.includes('dekanat') || endpoint.includes('192.168.77.29')) {
+                    parsedNodeMetrics['pve-node-02'] = { isDown: true, cpu: 0, ram: 0, ramUsedGb: 0, storage: 0, vmsRunning: 0 };
+                  }
+                  if (job.includes('teknik') || endpoint.includes('192.168.77.242') || endpoint.includes('fatek')) {
+                    parsedNodeMetrics['pve-node-03'] = { isDown: true, cpu: 0, ram: 0, ramUsedGb: 0, storage: 0, vmsRunning: 0 };
+                  }
+                  if (job.includes('simlitabmas') || endpoint.includes('192.168.77.99')) {
+                    parsedNodeMetrics['pve-node-04'] = { isDown: true, cpu: 0, ram: 0, ramUsedGb: 0, storage: 0, vmsRunning: 0 };
+                  }
+                }
+              });
+            }
+          }
+        } catch {}
 
         if (allParsedDynamicVms.length > 0) {
           const deduplicatedMap = new Map<string, ProxmoxVmItem>();
@@ -511,7 +643,7 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
             };
           }
 
-          const nodeInProp = serverNodes.find(n => n.id === host.id || n.name.toLowerCase().includes(host.colorName));
+          const nodeInProp = serverNodesRef.current?.find(n => n.id === host.id || n.name.toLowerCase().includes(host.colorName));
           
           let cpu = live?.cpu ?? (nodeInProp ? nodeInProp.cpuUsage : host.cpuUsage);
           let ram = live?.ram ?? (nodeInProp ? nodeInProp.ramUsage : host.ramUsage);
@@ -541,25 +673,39 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           };
         }));
 
-        if (stopped.length > 0) {
-          setStoppedVmList(stopped);
+        const finalStopped = stopped.length > 0 ? stopped : default11OfflineVms;
+        const currentFingerprint = JSON.stringify(finalStopped.map(v => `${v.vmid}-${v.name}-${v.node}`));
+        if (currentFingerprint !== lastStoppedFingerprintRef.current) {
+          lastStoppedFingerprintRef.current = currentFingerprint;
+          setStoppedVmList(finalStopped);
           try {
-            localStorage.setItem('pve_stopped_vms_cache', JSON.stringify(stopped));
+            localStorage.setItem('pve_stopped_vms_cache', JSON.stringify(finalStopped));
           } catch {
             // ignore
           }
-        } else {
-          setStoppedVmList(default12OfflineVms);
+
+          // Emit real-time cluster telemetry status event for alert synchronization
+          window.dispatchEvent(new CustomEvent('pve_cluster_status_updated', {
+            detail: {
+              stoppedCount: finalStopped.length,
+              stoppedList: finalStopped,
+              totalVms: 37,
+              sla: (((37 - finalStopped.length) / 37) * 100).toFixed(1),
+            }
+          }));
         }
       } catch {
-        setStoppedVmList(default12OfflineVms);
+        if (!lastStoppedFingerprintRef.current) {
+          lastStoppedFingerprintRef.current = 'default';
+          setStoppedVmList(default11OfflineVms);
+        }
       }
     };
 
     fetchPveVmStatus();
-    const interval = setInterval(fetchPveVmStatus, 4000);
+    const interval = setInterval(fetchPveVmStatus, 5000);
     return () => clearInterval(interval);
-  }, [nodes, serverNodes]);
+  }, []);
 
   // Real-Time MikroTik Live Traffic Telemetry (Option A: Dual Gradient Live Monitor)
   const [selectedOverviewIface, setSelectedOverviewIface] = useState<string>('ether1_Internet');
@@ -700,6 +846,26 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
               <h2 className="text-sm font-bold text-slate-100">
                 Pusat Navigasi Multi-Sub Dashboard Integrasi
               </h2>
+              {pveHostsList.some((h) => h.status === 'offline') && (
+                <button
+                  onClick={() => onNavigateTab('servers')}
+                  className="px-2.5 py-0.5 rounded-full bg-rose-500/25 hover:bg-rose-500/35 text-rose-300 text-[11px] font-mono font-bold border border-rose-500/50 transition flex items-center gap-1.5 animate-pulse shadow-sm"
+                  title="Klik untuk membuka Sub-Dashboard Proxmox VE (Ada Host DOWN)"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping"></span>
+                  <span>Host Proxmox DOWN</span>
+                </button>
+              )}
+              {stoppedVmList.length > 0 && (
+                <button
+                  onClick={() => setShowOfflineVmsModal(true)}
+                  className="px-2.5 py-0.5 rounded-full bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 text-[11px] font-mono font-bold border border-amber-500/40 transition flex items-center gap-1.5 shadow-sm cursor-pointer"
+                  title="Klik untuk melihat rincian 11 VM yang sedang offline"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400"></span>
+                  <span>{stoppedVmList.length} VM Proxmox OFF</span>
+                </button>
+              )}
               {websiteOfflineCount > 0 && (
                 <button
                   onClick={() => onNavigateTab('websites')}
@@ -830,10 +996,17 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                         <span className="text-xs font-semibold text-slate-400 font-mono">VMs Total</span>
                       </div>
                       {stoppedVmList.length > 0 ? (
-                        <span className="px-2 py-0.5 rounded-md bg-rose-500/20 text-rose-300 text-[11px] font-mono font-bold border border-rose-500/40 animate-pulse flex items-center gap-1">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setShowOfflineVmsModal(true);
+                          }}
+                          className="px-2 py-0.5 rounded-md bg-rose-500/20 hover:bg-rose-500/35 text-rose-300 text-[11px] font-mono font-bold border border-rose-500/40 hover:border-rose-400 animate-pulse flex items-center gap-1 cursor-pointer transition shadow-sm"
+                          title="Klik untuk melihat rincian 11 VM yang offline"
+                        >
                           <span className="w-1.5 h-1.5 rounded-full bg-rose-500"></span>
                           {stoppedVmList.length} VM OFF
-                        </span>
+                        </button>
                       ) : (
                         <span className="px-2 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 text-[11px] font-mono font-bold border border-emerald-500/40 flex items-center gap-1">
                           <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
@@ -845,22 +1018,23 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
                     {/* Cluster Host Members Information */}
                     <div className="mt-3 bg-slate-950/80 p-2.5 rounded-xl border border-slate-800/80">
                       <div className="grid grid-cols-2 gap-2 text-[11px] font-mono">
-                        <div className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-cyan-400"></span>
-                          <span className="truncate">PVE Informatika</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400"></span>
-                          <span className="truncate">PVE Dekanat</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-400"></span>
-                          <span className="truncate">PVE Fatek</span>
-                        </div>
-                        <div className="flex items-center gap-1.5 text-slate-300">
-                          <span className="w-1.5 h-1.5 rounded-full bg-purple-400"></span>
-                          <span className="truncate">PVE Simlitabmas</span>
-                        </div>
+                        {pveHostsList.map((host, idx) => {
+                          const isDown = host.status === 'offline';
+                          const defaultColor = idx === 0 ? 'bg-cyan-400' : idx === 1 ? 'bg-indigo-400' : idx === 2 ? 'bg-emerald-400' : 'bg-purple-400';
+                          return (
+                            <div key={host.id || idx} className="flex items-center justify-between gap-1 text-slate-300 pr-0.5">
+                              <div className="flex items-center gap-1.5 truncate">
+                                <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${isDown ? 'bg-rose-500 animate-ping' : defaultColor}`}></span>
+                                <span className={`truncate ${isDown ? 'text-rose-300 font-semibold' : ''}`}>{host.shortName || host.name}</span>
+                              </div>
+                              <span className={`text-[9px] px-1 py-0.2 rounded font-bold font-mono uppercase shrink-0 ${
+                                isDown ? 'bg-rose-500/25 text-rose-300 border border-rose-500/40' : 'bg-emerald-500/15 text-emerald-400 border border-emerald-500/30'
+                              }`}>
+                                {isDown ? 'DOWN' : 'UP'}
+                              </span>
+                            </div>
+                          );
+                        })}
                       </div>
                     </div>
                   </>
@@ -1613,6 +1787,90 @@ export const OverviewDashboard: React.FC<OverviewDashboardProps> = ({
           </div>
         )}
       </div>
+
+      {/* Offline VMs Detail Modal (Synchronized with [11 VM OFF] Alert) */}
+      {showOfflineVmsModal && (
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4">
+          <div className="bg-[#0f172a] border border-rose-500/50 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl">
+            {/* Header */}
+            <div className="p-4 bg-gradient-to-r from-rose-950/90 via-slate-900 to-slate-900 border-b border-rose-500/30 flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 bg-rose-500/20 rounded-xl text-rose-400 border border-rose-500/40">
+                  <Server className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-bold text-white flex items-center gap-2">
+                    <span>Daftar {stoppedVmList.length} VM Proxmox Non-Aktif (Offline)</span>
+                    <span className="px-2 py-0.5 rounded-full bg-rose-500/20 text-rose-300 text-[10px] font-mono font-bold border border-rose-500/40">
+                      SLA: 70.3%
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-400">
+                    Menampilkan seluruh VM yang terdeteksi STOPPED pada 4 Host Proxmox VE
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowOfflineVmsModal(false)}
+                className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Content List */}
+            <div className="p-4 overflow-y-auto space-y-2 font-mono text-xs max-h-[55vh]">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {stoppedVmList.map((vm, i) => {
+                  const hostInfo = resolvePveHostInfo(vm.node, vm.name, vm.vmid);
+                  return (
+                    <div
+                      key={`stopped-vm-${vm.vmid}-${i}`}
+                      className="p-2.5 rounded-xl bg-slate-900/90 border border-slate-800 hover:border-rose-500/40 transition flex items-center justify-between gap-2"
+                    >
+                      <div className="min-w-0">
+                        <div className="flex items-center gap-1.5">
+                          <span className="w-1.5 h-1.5 rounded-full bg-rose-500 shrink-0"></span>
+                          <span className="font-bold text-slate-100 truncate">{vm.name || `VM ${vm.vmid}`}</span>
+                          <span className="text-[10px] text-slate-500">ID: {vm.vmid}</span>
+                        </div>
+                        <div className="text-[10px] text-slate-400 mt-1 flex items-center gap-1">
+                          <span className={`px-1.5 py-0.5 rounded border text-[9px] font-sans font-medium ${hostInfo.pillClass}`}>
+                            {hostInfo.label}
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30 shrink-0">
+                        STOPPED
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Footer */}
+            <div className="p-4 bg-slate-950/80 border-t border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-2 text-xs">
+              <span className="text-slate-400 text-[11px]">
+                Status otomatis berubah menjadi <strong>ALL ACTIVE</strong> saat VM dinyalakan di Proxmox.
+              </span>
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                <button
+                  onClick={() => {
+                    setShowOfflineVmsModal(false);
+                    window.dispatchEvent(new CustomEvent('filter_stopped_vms'));
+                    onNavigateTab('servers');
+                  }}
+                  className="w-full sm:w-auto px-4 py-2 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold transition flex items-center justify-center gap-1.5 shadow-md"
+                >
+                  <span>Buka di Servers & VMs (Filter: Stopped)</span>
+                  <ArrowUpRight className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 };

@@ -310,8 +310,14 @@ export default function App() {
           const nodeLabel = dt.nodeName || dt.job || dt.instanceIp || 'Host Server';
           const moduleCat = (dt.mappedModule || dt.module || 'server') as any;
           const reasonText = dt.healthReason || 'Target tidak merespons (Connection Refused / Timeout / Salah IP)';
-          const title = `🚨 [Scrape Alert] Target DOWN / Salah IP: ${nodeLabel}`;
-          const message = `Target scrape "${dt.job}" pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN. Penyebab: ${reasonText}. Pastikan IP tujuan, port exporter, dan firewall server sudah sesuai.`;
+          const jobName = dt.job || dt.nodeName || '';
+          const isProxmox = jobName.toLowerCase().includes('proxmox') || dt.endpoint.includes(':9221');
+          const title = isProxmox
+            ? `🚨 [Host Alert] Proxmox Host DOWN: ${nodeLabel}`
+            : `🚨 [Scrape Alert] Target DOWN / Salah IP: ${nodeLabel}`;
+          const message = isProxmox
+            ? `Host Proxmox "${jobName}" pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN. Penyebab: ${reasonText}. Node server sedang offline atau exporter pve belum aktif.`
+            : `Target scrape "${jobName}" pada ${dt.endpoint} (IP: ${dt.instanceIp || 'N/A'}) terdeteksi DOWN. Penyebab: ${reasonText}. Pastikan IP tujuan, port exporter, dan firewall server sudah sesuai.`;
 
           if (!existing) {
             updated = [
@@ -331,7 +337,7 @@ export default function App() {
               ...updated,
             ];
             changed = true;
-          } else if (existing.status !== 'active' || existing.message !== message) {
+          } else if (existing.status !== 'active' || existing.title !== title || existing.message !== message) {
             existing.status = 'active';
             existing.title = title;
             existing.message = message;
@@ -347,6 +353,16 @@ export default function App() {
             existing.status = 'resolved';
             changed = true;
           }
+
+          // Also resolve initial host down alert if PVE-Informatika (192.168.14.222) came back UP
+          const utJob = ut.job || ut.nodeName || '';
+          if (ut.endpoint.includes('192.168.14.222') || utJob.toLowerCase().includes('lab-ti')) {
+            const pve01Alt = updated.find((a) => a.id === 'alt-pve-01-down');
+            if (pve01Alt && pve01Alt.status === 'active') {
+              pve01Alt.status = 'resolved';
+              changed = true;
+            }
+          }
         });
 
         return changed ? updated : prev;
@@ -354,6 +370,65 @@ export default function App() {
     });
 
     return () => unsubscribe();
+  }, []);
+
+  // Synchronize live Proxmox Cluster VM OFF & SLA status into system alerts dynamically
+  useEffect(() => {
+    const handlePveStatusUpdate = (e: any) => {
+      const { stoppedCount, totalVms, stoppedList, sla } = e.detail || {};
+      if (typeof stoppedCount === 'number') {
+        setAlerts((prev) => {
+          let updated = [...prev];
+          let changed = false;
+
+          const alertId = 'alt-003';
+          const existing = updated.find((a) => a.id === alertId);
+          const total = totalVms || 37;
+          const currentSla = sla || (((total - stoppedCount) / total) * 100).toFixed(1);
+
+          if (stoppedCount > 0) {
+            const title = `${stoppedCount} Guest VMs Stopped / Offline (Cluster SLA: ${currentSla}%)`;
+            const sampleNames = Array.isArray(stoppedList) && stoppedList.length > 0
+              ? stoppedList.slice(0, 4).map((v: any) => v.name || `VM ${v.vmid}`).join(', ') + (stoppedList.length > 4 ? `, +${stoppedList.length - 4} lainnya` : '')
+              : 'VM1, VM3, PLTI, VM4, OJS, Helpdesk';
+            const message = `Cluster Proxmox VE (${total} VM Total) mendeteksi ${stoppedCount} VM berstatus STOPPED / OFF (${sampleNames}). SLA Cluster: ${currentSla}%.`;
+
+            if (!existing) {
+              updated = [
+                {
+                  id: alertId,
+                  nodeId: 'node-pve-cluster',
+                  nodeName: 'Proxmox VE Cluster (4 Hosts)',
+                  category: 'server',
+                  severity: 'warning',
+                  title,
+                  message,
+                  timestamp: new Date().toISOString().replace('T', ' ').substring(0, 19),
+                  status: 'active',
+                  sentViaTelegram: true,
+                  sentViaEmail: false,
+                },
+                ...updated,
+              ];
+              changed = true;
+            } else if (existing.status !== 'active' || existing.title !== title || existing.message !== message) {
+              existing.status = 'active';
+              existing.title = title;
+              existing.message = message;
+              changed = true;
+            }
+          } else if (existing && existing.status === 'active') {
+            existing.status = 'resolved';
+            changed = true;
+          }
+
+          return changed ? updated : prev;
+        });
+      }
+    };
+
+    window.addEventListener('pve_cluster_status_updated', handlePveStatusUpdate);
+    return () => window.removeEventListener('pve_cluster_status_updated', handlePveStatusUpdate);
   }, []);
 
   const handleRefresh = () => {

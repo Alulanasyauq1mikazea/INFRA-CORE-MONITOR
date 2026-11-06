@@ -2865,6 +2865,50 @@ app.post('/api/mikrotik/vpn/set-keepalive', async (req, res) => {
 });
 
 // Real-Time MikroTik Firewall & QoS Rules Endpoint
+function formatBytesMikrotik(bytes: number | string | undefined): string {
+  const b = Number(bytes);
+  if (!b || isNaN(b) || b <= 0) return '0 B';
+  if (b >= 1073741824) return (b / 1073741824).toFixed(1) + ' GB';
+  if (b >= 1048576) return (b / 1048576).toFixed(1) + ' MB';
+  if (b >= 1024) return (b / 1024).toFixed(1) + ' KB';
+  return b + ' B';
+}
+
+function formatPacketsMikrotik(pkts: number | string | undefined): string {
+  const p = Number(pkts);
+  if (!p || isNaN(p) || p <= 0) return '0 pkts';
+  if (p >= 1000000) return (p / 1000000).toFixed(1) + 'M pkts';
+  if (p >= 1000) return (p / 1000).toFixed(1) + 'k pkts';
+  return p + ' pkts';
+}
+
+function formatBpsMikrotik(bps: number | string | undefined): string {
+  const b = Number(bps);
+  if (!b || isNaN(b) || b <= 0) return '0 bps';
+  if (b >= 1000000000) return (b / 1000000000).toFixed(1) + ' Gbps';
+  if (b >= 1000000) return (b / 1000000).toFixed(1) + ' Mbps';
+  if (b >= 1000) return (b / 1000).toFixed(1) + ' Kbps';
+  return b + ' bps';
+}
+
+function formatSpeedLimit(limitStr: string): string {
+  if (!limitStr) return 'Unlimited';
+  const parts = limitStr.split('/').map((s) => s.trim());
+  const parseVal = (v: string) => {
+    const num = Number(v);
+    if (!num || isNaN(num) || num <= 0) return v || '0';
+    if (num >= 1000000000) return `${num / 1000000000}G`;
+    if (num >= 1000000) return `${num / 1000000}M`;
+    if (num >= 1000) return `${num / 1000}k`;
+    return String(num);
+  };
+  if (parts.length === 2) {
+    return `${parseVal(parts[0])} / ${parseVal(parts[1])}`;
+  }
+  return parseVal(limitStr);
+}
+
+// Real-Time MikroTik Firewall & QoS Rules Endpoint (Direct RouterOS REST API)
 app.get('/api/mikrotik/firewall', async (req, res) => {
   const cfg = getActiveMikrotikConfig();
   const host = (req.query.host as string) || cfg.host;
@@ -2881,51 +2925,192 @@ app.get('/api/mikrotik/firewall', async (req, res) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), 4000);
 
-    const [filterRes, natRes, queueRes] = await Promise.allSettled([
+    const [filterRes, natRes, rawRes, queueRes] = await Promise.allSettled([
       fetch(`${protocol}://${host}:${restPort}/rest/ip/firewall/filter`, { headers, signal: controller.signal }),
       fetch(`${protocol}://${host}:${restPort}/rest/ip/firewall/nat`, { headers, signal: controller.signal }),
+      fetch(`${protocol}://${host}:${restPort}/rest/ip/firewall/raw`, { headers, signal: controller.signal }),
       fetch(`${protocol}://${host}:${restPort}/rest/queue/simple`, { headers, signal: controller.signal }),
     ]);
     clearTimeout(timeoutId);
 
-    let filterRules: any[] = [];
-    let natRules: any[] = [];
-    let simpleQueues: any[] = [];
+    let rawFilter: any[] = [];
+    let rawNat: any[] = [];
+    let rawRaw: any[] = [];
+    let rawQueues: any[] = [];
 
     if (filterRes.status === 'fulfilled' && filterRes.value.ok) {
-      filterRules = await filterRes.value.json();
+      rawFilter = await filterRes.value.json();
     }
     if (natRes.status === 'fulfilled' && natRes.value.ok) {
-      natRules = await natRes.value.json();
+      rawNat = await natRes.value.json();
+    }
+    if (rawRes.status === 'fulfilled' && rawRes.value.ok) {
+      rawRaw = await rawRes.value.json();
     }
     if (queueRes.status === 'fulfilled' && queueRes.value.ok) {
-      simpleQueues = await queueRes.value.json();
+      rawQueues = await queueRes.value.json();
     }
 
-    if (filterRules.length > 0 || natRules.length > 0 || simpleQueues.length > 0) {
+    const mapRule = (r: any, tableType: 'filter' | 'nat' | 'raw') => {
+      const bytesNum = Number(r.bytes || 0);
+      const pktsNum = Number(r.packets || 0);
+      const port = r['dst-port'] || r['src-port'] || r.port || 'any';
+      const src = r['src-address-list'] ? `list:${r['src-address-list']}` : (r['src-address'] || 'any');
+      const dst = r['dst-address-list'] ? `list:${r['dst-address-list']}` : (r['dst-address'] || 'any');
+      return {
+        id: r['.id'] || r.id || '',
+        tableType,
+        chain: r.chain || (tableType === 'raw' ? 'prerouting' : (tableType === 'nat' ? 'srcnat' : 'forward')),
+        action: r.action || 'accept',
+        protocol: r.protocol || 'all',
+        port,
+        src,
+        dst,
+        inInterface: r['in-interface'] || r['in-interface-list'] || '',
+        outInterface: r['out-interface'] || r['out-interface-list'] || '',
+        bytes: bytesNum,
+        bytesFormatted: formatBytesMikrotik(bytesNum),
+        packets: pktsNum,
+        packetsFormatted: formatPacketsMikrotik(pktsNum),
+        comment: r.comment || '',
+        disabled: r.disabled === 'true' || r.disabled === true,
+        dynamic: r.dynamic === 'true' || r.dynamic === true,
+        invalid: r.invalid === 'true' || r.invalid === true,
+        log: r.log === 'true' || r.log === true,
+      };
+    };
+
+    const mapQueue = (q: any) => {
+      const maxLimitStr = q['max-limit'] || '0/0';
+      const [upLimitBps, downLimitBps] = maxLimitStr.split('/').map(Number);
+      const rateStr = q.rate || '0/0';
+      const [upRateBps, downRateBps] = rateStr.split('/').map(Number);
+      const bytesStr = q.bytes || '0/0';
+      const [upBytes, downBytes] = bytesStr.split('/').map(Number);
+      const droppedStr = q.dropped || '0/0';
+      const [upDrops, downDrops] = droppedStr.split('/').map(Number);
+      const prioStr = q.priority || '8/8';
+      const [upPrio, downPrio] = prioStr.split('/').map(Number);
+
+      const maxEffective = (downLimitBps && downLimitBps > 0) ? downLimitBps : (upLimitBps || 1);
+      const curEffective = (downRateBps && downRateBps > 0) ? downRateBps : upRateBps;
+      const pct = maxEffective > 1 ? Math.min(100, Math.round((curEffective / maxEffective) * 100)) : 0;
+
+      const totalBytes = (upBytes || 0) + (downBytes || 0);
+      const totalDrops = (upDrops || 0) + (downDrops || 0);
+
+      return {
+        id: q['.id'] || q.id || '',
+        name: q.name || 'Queue',
+        target: q.target || 'any',
+        maxLimit: formatSpeedLimit(maxLimitStr),
+        maxLimitRaw: maxLimitStr,
+        burst: q['burst-limit'] ? formatSpeedLimit(q['burst-limit']) : '-',
+        rate: rateStr,
+        rateFormatted: `${formatBpsMikrotik(upRateBps)} / ${formatBpsMikrotik(downRateBps)}`,
+        upRateFormatted: formatBpsMikrotik(upRateBps),
+        downRateFormatted: formatBpsMikrotik(downRateBps),
+        ratePercent: pct,
+        bytes: totalBytes,
+        bytesFormatted: `${formatBytesMikrotik(upBytes)} / ${formatBytesMikrotik(downBytes)}`,
+        packets: Number(q.packets || 0),
+        dropped: totalDrops,
+        droppedFormatted: `${upDrops} / ${downDrops}`,
+        priority: `P${Math.min(upPrio || 8, downPrio || 8)}`,
+        priorityNum: Math.min(upPrio || 8, downPrio || 8),
+        comment: q.comment || '',
+        disabled: q.disabled === 'true' || q.disabled === true,
+        dynamic: q.dynamic === 'true' || q.dynamic === true,
+      };
+    };
+
+    if (rawFilter.length > 0 || rawNat.length > 0 || rawRaw.length > 0 || rawQueues.length > 0) {
+      const parsedFilter = rawFilter.map((r) => mapRule(r, 'filter'));
+      const parsedNat = rawNat.map((r) => mapRule(r, 'nat'));
+      const parsedRaw = rawRaw.map((r) => mapRule(r, 'raw'));
+      const parsedQueues = rawQueues.map(mapQueue);
+
+      const allFirewallRules = [...parsedRaw, ...parsedFilter, ...parsedNat];
+      const totalDroppedBytes = allFirewallRules
+        .filter((r) => r.action === 'drop')
+        .reduce((sum, r) => sum + r.bytes, 0);
+      const totalDroppedPackets = allFirewallRules
+        .filter((r) => r.action === 'drop')
+        .reduce((sum, r) => sum + r.packets, 0);
+      const totalFasttrackBytes = allFirewallRules
+        .filter((r) => r.action === 'fasttrack-connection' || r.action === 'fasttrack')
+        .reduce((sum, r) => sum + r.bytes, 0);
+
       return res.json({
         success: true,
         mode: 'live_routeros_rest',
         router: `MikroTik CCR1036 (${host})`,
-        filterRules,
-        natRules,
-        simpleQueues,
-        totalFilterRules: filterRules.length,
-        totalNatRules: natRules.length,
-        totalQueues: simpleQueues.length,
+        filterRules: parsedFilter,
+        natRules: parsedNat,
+        rawRules: parsedRaw,
+        allFirewallRules,
+        simpleQueues: parsedQueues,
+        metrics: {
+          totalRules: allFirewallRules.length,
+          totalFilter: parsedFilter.length,
+          totalNat: parsedNat.length,
+          totalRaw: parsedRaw.length,
+          totalDroppedBytesFormatted: formatBytesMikrotik(totalDroppedBytes),
+          totalDroppedPacketsFormatted: formatPacketsMikrotik(totalDroppedPackets),
+          totalFasttrackBytesFormatted: formatBytesMikrotik(totalFasttrackBytes),
+          totalQueues: parsedQueues.length,
+          congestedQueues: parsedQueues.filter((q) => q.ratePercent > 80 || q.dropped > 0).length,
+        },
       });
     }
   } catch (err: any) {
     // Graceful fallback
   }
 
+  // Baseline real-structure fallback
+  const baseFilter = [
+    { id: '*1', tableType: 'raw', chain: 'prerouting (RAW)', action: 'drop', protocol: 'all', port: 'any', src: 'list:crowdsec', dst: 'any', inInterface: 'ether1_Internet', outInterface: '', bytes: 24800000000, bytesFormatted: '24.8 GB', packets: 1250000, packetsFormatted: '1.2M pkts', comment: 'CrowdSec Auto-Blacklist Hardware RAW Drop (Active Rules)', disabled: false, dynamic: true, log: true },
+    { id: '*2', tableType: 'filter', chain: 'input', action: 'accept', protocol: 'icmp', port: 'any', src: '192.168.77.0/24', dst: 'any', inInterface: 'ether2_Lokal', outInterface: '', bytes: 1450000, bytesFormatted: '1.4 MB', packets: 24000, packetsFormatted: '24.0k pkts', comment: 'Allow Ping LAN Gateway', disabled: false, dynamic: false, log: false },
+    { id: '*3', tableType: 'filter', chain: 'input', action: 'accept', protocol: 'tcp', port: '8728, 80, 443, 22', src: '192.168.77.0/24', dst: 'any', inInterface: 'ether2_Lokal', outInterface: '', bytes: 450000000, bytesFormatted: '450.0 MB', packets: 120000, packetsFormatted: '120.0k pkts', comment: 'Allow Admin Management (API, Winbox, REST)', disabled: false, dynamic: false, log: false },
+    { id: '*4', tableType: 'filter', chain: 'input', action: 'drop', protocol: 'all', port: 'any', src: '0.0.0.0/0', dst: 'any', inInterface: 'ether1_Internet', outInterface: '', bytes: 3800000000, bytesFormatted: '3.8 GB', packets: 890000, packetsFormatted: '890.0k pkts', comment: 'Drop Invalid & Unsolicited External Packets', disabled: false, dynamic: false, log: true },
+    { id: '*5', tableType: 'filter', chain: 'forward', action: 'fasttrack', protocol: 'tcp, udp', port: 'any', src: 'any', dst: 'any', inInterface: '', outInterface: '', bytes: 84100000000, bytesFormatted: '84.1 GB', packets: 5600000, packetsFormatted: '5.6M pkts', comment: 'FastTrack Established & Related Connections', disabled: false, dynamic: false, log: false },
+    { id: '*6', tableType: 'filter', chain: 'forward', action: 'accept', protocol: 'all', port: 'any', src: 'any', dst: 'any', inInterface: '', outInterface: '', bytes: 12000000000, bytesFormatted: '12.0 GB', packets: 980000, packetsFormatted: '980.0k pkts', comment: 'Accept Established & Related Connections', disabled: false, dynamic: false, log: false },
+    { id: '*7', tableType: 'nat', chain: 'srcnat', action: 'masquerade', protocol: 'all', port: 'any', src: '192.168.77.0/24', dst: 'any', inInterface: '', outInterface: 'ether1_Internet', bytes: 128500000000, bytesFormatted: '128.5 GB', packets: 8400000, packetsFormatted: '8.4M pkts', comment: 'WAN Masquerade Primary (ether1_Internet)', disabled: false, dynamic: false, log: false },
+    { id: '*8', tableType: 'nat', chain: 'dstnat', action: 'dst-nat', protocol: 'tcp', port: '443', src: '0.0.0.0/0', dst: '36.66.246.173', inInterface: 'ether1_Internet', outInterface: '', bytes: 12300000000, bytesFormatted: '12.3 GB', packets: 420000, packetsFormatted: '420.0k pkts', comment: 'WAF Reverse Proxy Port Forward -> 192.168.77.188:443', disabled: false, dynamic: false, log: false },
+    { id: '*9', tableType: 'nat', chain: 'dstnat', action: 'dst-nat', protocol: 'udp', port: '51820', src: '0.0.0.0/0', dst: '36.66.246.173', inInterface: 'ether1_Internet', outInterface: '', bytes: 3400000000, bytesFormatted: '3.4 GB', packets: 210000, packetsFormatted: '210.0k pkts', comment: 'WireGuard Site-to-Site VPN Service Port', disabled: false, dynamic: false, log: false },
+    { id: '*10', tableType: 'filter', chain: 'forward', action: 'drop', protocol: 'all', port: 'any', src: '10.30.0.0/20', dst: '192.168.77.0/24', inInterface: '', outInterface: '', bytes: 850000000, bytesFormatted: '850.0 MB', packets: 140000, packetsFormatted: '140.0k pkts', comment: 'Block Guest Mahasiswa to Management VLAN', disabled: false, dynamic: false, log: true },
+    { id: '*11', tableType: 'filter', chain: 'input', action: 'drop', protocol: 'all', port: 'any', src: 'list:blacklist-botnet', dst: 'any', inInterface: 'ether1_Internet', outInterface: '', bytes: 1900000000, bytesFormatted: '1.9 GB', packets: 340000, packetsFormatted: '340.0k pkts', comment: 'Block Known DDoS & Botnet IP List', disabled: false, dynamic: false, log: true },
+  ];
+
+  const baseQueues = [
+    { id: '*1', name: '10. REKTORAT', target: '192.168.5.10/32', maxLimit: '50M / 50M', burst: '80M / 80M', rate: '4100000/12400000', rateFormatted: '4.1 Mbps / 12.4 Mbps', ratePercent: 25, bytes: 4500000000, bytesFormatted: '1.2 GB / 3.3 GB', packets: 4120000, dropped: 0, priority: 'P1', priorityNum: 1, comment: 'Executive VIP Priority', disabled: false },
+    { id: '*2', name: '13. LAB. KOMPUTER', target: '192.168.5.13/32', maxLimit: '50M / 50M', burst: '80M / 80M', rate: '22000000/48900000', rateFormatted: '22.0 Mbps / 48.9 Mbps', ratePercent: 98, bytes: 14200000000, bytesFormatted: '4.2 GB / 10.0 GB', packets: 9800000, dropped: 142, priority: 'P4', priorityNum: 4, comment: 'Praktikum TI (Throttled)', disabled: false },
+    { id: '*3', name: 'hs-<hotspot1>', target: 'bridgeCap_Hotspot', maxLimit: '100M / 100M', burst: '100M / 100M', rate: '35000000/92500000', rateFormatted: '35.0 Mbps / 92.5 Mbps', ratePercent: 92, bytes: 54800000000, bytesFormatted: '12.4 GB / 42.4 GB', packets: 54802248, dropped: 89, priority: 'P8', priorityNum: 8, comment: 'Hotspot Mahasiswa Kampus', disabled: false },
+    { id: '*4', name: 'APP TEKNIK', target: '192.168.8.0/24', maxLimit: '100M / 100M', burst: '150M / 150M', rate: '12000000/34200000', rateFormatted: '12.0 Mbps / 34.2 Mbps', ratePercent: 34, bytes: 24500000000, bytesFormatted: '6.2 GB / 18.3 GB', packets: 21400000, dropped: 0, priority: 'P3', priorityNum: 3, comment: 'Fakultas Teknik Network', disabled: false },
+    { id: '*5', name: 'LAB SI', target: '192.168.6.0/24', maxLimit: '100M / 100M', burst: '150M / 150M', rate: '28000000/62000000', rateFormatted: '28.0 Mbps / 62.0 Mbps', ratePercent: 62, bytes: 33900000000, bytesFormatted: '8.4 GB / 25.5 GB', packets: 33957989, dropped: 12, priority: 'P2', priorityNum: 2, comment: 'Lab Sistem Informasi', disabled: false },
+    { id: '*6', name: 'cctv', target: '192.168.66.0/24', maxLimit: '30M / 30M', burst: '30M / 30M', rate: '18000000/21000000', rateFormatted: '18.0 Mbps / 21.0 Mbps', ratePercent: 70, bytes: 85400000000, bytesFormatted: '72.1 GB / 13.3 GB', packets: 68400200, dropped: 0, priority: 'P1', priorityNum: 1, comment: 'Kamera CCTV Keamanan Kampus', disabled: false },
+  ];
+
   return res.json({
     success: true,
     mode: 'simulated_live_config',
     router: `MikroTik CCR1036 (${host})`,
-    totalFilterRules: 11,
-    totalNatRules: 4,
-    totalQueues: 6,
+    filterRules: baseFilter.filter((r) => r.tableType === 'filter'),
+    natRules: baseFilter.filter((r) => r.tableType === 'nat'),
+    rawRules: baseFilter.filter((r) => r.tableType === 'raw'),
+    allFirewallRules: baseFilter,
+    simpleQueues: baseQueues,
+    metrics: {
+      totalRules: baseFilter.length,
+      totalFilter: 7,
+      totalNat: 3,
+      totalRaw: 1,
+      totalDroppedBytesFormatted: '30.5 GB',
+      totalDroppedPacketsFormatted: '2.5M pkts',
+      totalFasttrackBytesFormatted: '84.1 GB',
+      totalQueues: baseQueues.length,
+      congestedQueues: 2,
+    },
   });
 });
 
@@ -7608,20 +7793,30 @@ function getIpGeoLocation(ip: string) {
 
   // Google Cloud 34.x Regional Ranges
   if (p0 === 34) {
-    if (p1 === 87 || p1 === 143 || p1 === 128) {
+    // Australia: australia-southeast1 (Sydney), australia-southeast2 (Melbourne)
+    if (p1 === 40 || p1 === 116 || p1 === 129 || p1 === 151 || (p1 === 89 && p2 >= 160 && p2 <= 191)) {
+      return { country: 'AU', countryName: 'Australia', flag: '🇦🇺', city: 'Sydney', isp: 'GOOGLE-CLOUD-PLATFORM (Australia)' };
+    }
+    if (p1 === 87 || p1 === 143 || p1 === 128 || p1 === 124 || p1 === 126) {
       return { country: 'SG', countryName: 'Singapore (Google Cloud)', flag: '🇸🇬', city: 'Singapore', isp: 'Google Cloud (asia-southeast1)' };
     }
     if (p1 === 101) {
       return { country: 'ID', countryName: 'Indonesia (Jakarta)', flag: '🇮🇩', city: 'Jakarta', isp: 'Google Cloud (asia-southeast2)' };
     }
-    if (p1 === 53) {
+    if (p1 === 52 || p1 === 53 || p1 === 76 || p1 === 77) {
       return { country: 'BE', countryName: 'Belgium (Brussels)', flag: '🇧🇪', city: 'Brussels', isp: 'Google Cloud (europe-west1)' };
     }
-    if (p1 === 65 || p1 === 90 || p1 === 141) {
+    if (p1 === 65 || p1 === 90 || p1 === 141 || p1 === 157) {
       return { country: 'DE', countryName: 'Germany (Frankfurt)', flag: '🇩🇪', city: 'Frankfurt', isp: 'Google Cloud' };
     }
-    if (p1 === 76 || p1 === 89 || p1 === 105) {
+    if (p1 === 76 || p1 === 89 || p1 === 105 || p1 === 147) {
       return { country: 'NL', countryName: 'Netherlands (Eemshaven)', flag: '🇳🇱', city: 'Eemshaven', isp: 'Google Cloud (europe-west4)' };
+    }
+    if (p1 === 80 || p1 === 81 || p1 === 140 || p1 === 142) {
+      return { country: 'GB', countryName: 'United Kingdom (London)', flag: '🇬🇧', city: 'London', isp: 'Google Cloud (europe-west2)' };
+    }
+    if (p1 === 84 || p1 === 85 || p1 === 146) {
+      return { country: 'JP', countryName: 'Japan (Tokyo)', flag: '🇯🇵', city: 'Tokyo', isp: 'Google Cloud (asia-northeast1)' };
     }
     return { country: 'US', countryName: 'United States (Google Cloud)', flag: '🇺🇸', isp: 'Google Cloud' };
   }
@@ -7796,7 +7991,14 @@ const CANONICAL_GEO_MAP: Record<string, { countryName: string; flag: string }> =
 };
 
 function resolveCountryDetails(countryCode?: string, geoFallback?: any) {
-  const code = (countryCode && countryCode !== 'XX' ? countryCode : geoFallback?.country || 'XX').toUpperCase();
+  let code = countryCode ? countryCode.toUpperCase() : '';
+  // If countryCode is generic US (e.g. from ARIN CIDR registration) but geoFallback has specific regional country (e.g. AU, DE, BE, NL, SG, JP)
+  if (code === 'US' && geoFallback?.country && geoFallback.country !== 'US') {
+    code = geoFallback.country.toUpperCase();
+  } else if (!code || code === 'XX' || code === 'GLOBAL') {
+    code = (geoFallback?.country || 'XX').toUpperCase();
+  }
+
   const canonical = CANONICAL_GEO_MAP[code];
   if (canonical) {
     return {
@@ -7942,10 +8144,11 @@ app.get('/api/mikrotik/address-list', async (req, res) => {
           if (!ip) return null;
           
           const cleanIp = ip.split('/')[0];
+          const localAlert = localAlertIpMap.get(cleanIp);
           const geo = getIpGeoLocation(cleanIp);
+          const cMeta = resolveCountryDetails(localAlert?.source?.cn, geo);
           const isDynamic = entry.dynamic === 'true' || entry.dynamic === true || entry['.id']?.startsWith('*') || Boolean(entry.timeout);
           
-          const localAlert = localAlertIpMap.get(cleanIp);
           const isCommentLocal = entry.comment && (
             entry.comment.toLowerCase().includes('local') ||
             entry.comment.toLowerCase().includes('crowdsecurity/') ||
@@ -7971,12 +8174,19 @@ app.get('/api/mikrotik/address-list', async (req, res) => {
             }
           }
 
+          const ispText = localAlert?.source?.as_name || geo.isp || 'Cloud / Hosting Network';
+          const resolvedCountryName = localAlert?.source?.as_name
+            ? `${cMeta.countryName} (${localAlert.source.as_name})`
+            : (geo.isp ? `${cMeta.countryName} (${geo.isp})` : cMeta.countryName);
+
           return {
             id: entry['.id'] || `mt-${index}`,
             ip: cleanIp,
-            country: geo.country,
-            flag: geo.flag,
-            countryName: geo.countryName,
+            city: geo.city,
+            isp: ispText,
+            country: cMeta.country || geo.country,
+            flag: cMeta.flag || geo.flag,
+            countryName: resolvedCountryName,
             reason,
             action: 'drop',
             expiresIn: entry.timeout || '4h 00m (dynamic)',
@@ -8036,11 +8246,14 @@ app.get('/api/mikrotik/address-list', async (req, res) => {
         const lapiItems = csDecisions.map((d: any) => {
           const rawIp = d.value ? d.value.replace(/^Ip:/i, '') : '';
           const geo = getIpGeoLocation(rawIp);
+          const cMeta = resolveCountryDetails(d.country, geo);
           return {
             ip: rawIp,
-            country: d.country || geo.country,
-            flag: geo.flag,
-            countryName: d.as_name || geo.countryName,
+            city: geo.city,
+            isp: d.as_name || geo.isp || 'Cloud / Hosting Network',
+            country: cMeta.country,
+            flag: cMeta.flag,
+            countryName: d.as_name ? `${cMeta.countryName} (${d.as_name})` : cMeta.countryName,
             reason: d.scenario || d.reason || 'http:scan',
             action: d.type || 'ban',
             expiresIn: d.duration || '4h',

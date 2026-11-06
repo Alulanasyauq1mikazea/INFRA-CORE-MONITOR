@@ -2017,12 +2017,13 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
       }
       if (data.success && Array.isArray(data.items) && data.items.length > 0) {
         const enrichedItems = data.items.map((entry: any) => {
+          const rawMatch = rawLogEvents.find((e: any) => e.sourceIp === entry.ip);
           const geo = lookupIpLocation(entry.ip);
           return {
             ...entry,
-            flag: entry.flag && entry.flag !== '🌐' ? entry.flag : geo.flag,
-            country: entry.country && entry.country !== 'GLOBAL' && entry.country !== 'XX' ? entry.country : geo.country,
-            countryName: entry.countryName && entry.countryName !== 'RouterOS Address-List' && entry.countryName !== 'Global Community Blocklist' ? entry.countryName : geo.countryName,
+            flag: rawMatch?.flag || (entry.flag && entry.flag !== '🌐' ? entry.flag : geo.flag),
+            country: rawMatch?.country || (entry.country && entry.country !== 'GLOBAL' && entry.country !== 'XX' ? entry.country : geo.country),
+            countryName: rawMatch?.countryName || (entry.countryName && entry.countryName !== 'RouterOS Address-List' && entry.countryName !== 'Global Community Blocklist' ? entry.countryName : geo.countryName),
           };
         });
 
@@ -3023,6 +3024,7 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
         /* TAB 2: GeoIP Threat Map & Attack Origins (Harian Live dari MikroTik Address-List) */
         <GeoIpThreatMap
           blockedIps={blockedIpList}
+          rawLogEvents={rawLogEvents}
           onRemoveIp={handleRemoveIp}
           targetRouterName="MikroTik CCR1036-12G-4S"
           targetRouterIp={routerHost}

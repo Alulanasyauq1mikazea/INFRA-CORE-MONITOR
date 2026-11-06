@@ -27,7 +27,7 @@ import {
   ZoomOut,
   Maximize2
 } from 'lucide-react';
-import { lookupIpLocation } from '../utils/geoip';
+import { lookupIpLocation, resolveCityCoordinates, GLOBAL_CITY_COORDINATES } from '../utils/geoip';
 import { CountryFlag, getCanonicalCountryInfo } from './CountryFlag';
 
 export interface BlockedIpItem {
@@ -35,6 +35,10 @@ export interface BlockedIpItem {
   country?: string;
   flag?: string;
   countryName?: string;
+  city?: string;
+  isp?: string;
+  lat?: number;
+  lon?: number;
   reason?: string;
   action?: string;
   expiresIn?: string;
@@ -50,6 +54,7 @@ export interface BlockedIpItem {
 
 interface GeoIpThreatMapProps {
   blockedIps: BlockedIpItem[];
+  rawLogEvents?: any[];
   onRemoveIp?: (ip: string) => void;
   targetRouterName?: string;
   targetRouterIp?: string;
@@ -128,7 +133,7 @@ const createTargetIcon = () => {
   });
 };
 
-// Custom DivIcon creator for Threat Origins
+// Custom DivIcon creator for Country Threat Origins
 const createOriginIcon = (countryCode: string, flag: string, totalIps: number, isSelected: boolean) => {
   const size = Math.max(26, Math.min(42, 24 + Math.log2(totalIps + 1) * 3));
   return L.divIcon({
@@ -146,15 +151,61 @@ const createOriginIcon = (countryCode: string, flag: string, totalIps: number, i
   });
 };
 
-// Check whether an address-list timestamp is from today
-function isTimestampToday(timeStr?: string): boolean {
+// Custom DivIcon creator for High-Precision City Origins
+const createCityIcon = (cityName: string, countryCode: string, flag: string, totalIps: number, isSelected: boolean) => {
+  const size = Math.max(26, Math.min(40, 24 + Math.log2(totalIps + 1) * 2.8));
+  return L.divIcon({
+    className: 'custom-city-marker',
+    html: `
+      <div style="position: relative; display: flex; flex-direction: column; align-items: center; cursor: pointer;">
+        <div style="position: relative; width: ${size}px; height: ${size}px; display: flex; align-items: center; justify-content: center;">
+          <div style="position: absolute; width: 100%; height: 100%; border-radius: 50%; background: ${isSelected ? 'rgba(56, 189, 248, 0.45)' : 'rgba(244, 63, 94, 0.25)'}; animation: ${isSelected ? 'ping 1s infinite' : 'pulse 2s infinite'};"></div>
+          <div style="position: absolute; width: ${size - 4}px; height: ${size - 4}px; border-radius: 50%; background: ${isSelected ? '#0369a1' : '#881337'}; border: 2px solid ${isSelected ? '#38bdf8' : '#f43f5e'}; box-shadow: 0 0 10px ${isSelected ? '#38bdf8' : '#f43f5e'}; display: flex; align-items: center; justify-content: center; font-size: 10px; font-weight: bold; color: white; font-family: monospace;">
+            ${totalIps}
+          </div>
+        </div>
+        <div style="margin-top: 3px; padding: 1px 6px; border-radius: 4px; background: rgba(15, 23, 42, 0.92); border: 1px solid ${isSelected ? 'rgba(56, 189, 248, 0.6)' : 'rgba(244, 63, 94, 0.4)'}; font-size: 9px; font-family: monospace; font-weight: 700; color: ${isSelected ? '#38bdf8' : '#fecdd3'}; white-space: nowrap; pointer-events: none; text-shadow: 0 1px 2px black;">
+          ${cityName}
+        </div>
+      </div>
+    `,
+    iconSize: [size, size + 18],
+    iconAnchor: [size / 2, size / 2],
+  });
+};
+
+// Check whether an address-list timestamp matches given filter
+function isTimestampRecent(timeStr?: string, mode: 'today' | '24h' | 'all' = 'today'): boolean {
+  if (mode === 'all') return true;
   if (!timeStr) return false;
+
   const now = new Date();
   const pad = (n: number) => String(n).padStart(2, '0');
-  const isoDate = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
-  const slashDate = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
-  const shortSlash = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}`;
-  return timeStr.includes(isoDate) || timeStr.includes(slashDate) || timeStr.includes(shortSlash);
+  const todayIso = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+  const todaySlash = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}/${now.getFullYear()}`;
+  const todayShort = `${pad(now.getDate())}/${pad(now.getMonth() + 1)}`;
+
+  if (mode === 'today') {
+    return timeStr.includes(todayIso) || timeStr.includes(todaySlash) || timeStr.includes(todayShort);
+  }
+
+  if (mode === '24h') {
+    const yesterday = new Date(now.getTime() - 24 * 60 * 60 * 1000);
+    const yestIso = `${yesterday.getFullYear()}-${pad(yesterday.getMonth() + 1)}-${pad(yesterday.getDate())}`;
+    const yestSlash = `${pad(yesterday.getDate())}/${pad(yesterday.getMonth() + 1)}/${yesterday.getFullYear()}`;
+    const yestShort = `${pad(yesterday.getDate())}/${pad(yesterday.getMonth() + 1)}`;
+
+    return (
+      timeStr.includes(todayIso) ||
+      timeStr.includes(todaySlash) ||
+      timeStr.includes(todayShort) ||
+      timeStr.includes(yestIso) ||
+      timeStr.includes(yestSlash) ||
+      timeStr.includes(yestShort)
+    );
+  }
+
+  return true;
 }
 
 // Helper to generate a curved trajectory arc in Lat/Lon between two points
@@ -373,25 +424,54 @@ const AnimatedAttackMissiles: React.FC<AttackMissileProps> = ({ countries }) => 
 
 export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
   blockedIps = [],
+  rawLogEvents = [],
   onRemoveIp,
   targetRouterName = 'MikroTik CCR1036-12G-4S',
   targetRouterIp = '192.168.77.1',
 }) => {
-  const [timeFilter, setTimeFilter] = useState<'today' | 'all'>('today');
-  const [selectedCountry, setSelectedCountry] = useState<string | null>(null);
+  const [timeFilter, setTimeFilter] = useState<'today' | '24h' | 'all'>('today');
+  const [viewGranularity, setViewGranularity] = useState<'city' | 'country'>('city');
+  const [selectedNodeKey, setSelectedNodeKey] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState('');
   const [threatTypeFilter, setThreatTypeFilter] = useState<string>('all');
   const [copiedIp, setCopiedIp] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState<'map' | 'leaderboard' | 'stream'>('map');
   const [activeTileLayer, setActiveTileLayer] = useState<keyof typeof MAP_LAYERS>('esri_dark');
 
-  // Filter IP data: default strictly to TODAY's entries from MikroTik Address-List
+  // Map of IPs from live raw logs for 100% synchronized detection
+  const liveRawIpMap = useMemo(() => {
+    const map = new Map<string, { country: string; countryName: string; flag: string; asName?: string; city?: string }>();
+    if (Array.isArray(rawLogEvents)) {
+      rawLogEvents.forEach((e: any) => {
+        if (e.sourceIp && e.country) {
+          map.set(e.sourceIp, {
+            country: e.country,
+            countryName: e.countryName || e.country,
+            flag: e.flag,
+            asName: e.asName,
+            city: e.city,
+          });
+        }
+      });
+    }
+    return map;
+  }, [rawLogEvents]);
+
+  // Counts for each time filter
+  const todayCount = useMemo(() => {
+    return blockedIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, 'today')).length;
+  }, [blockedIps]);
+
+  const recent24hCount = useMemo(() => {
+    return blockedIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, '24h')).length;
+  }, [blockedIps]);
+
+  // Filter IP data: default strictly to chosen time filter from MikroTik Address-List
   const filteredIps = useMemo(() => {
     return blockedIps.filter((item) => {
       // 1. Time filter
-      if (timeFilter === 'today') {
-        const isToday = isTimestampToday(item.creationTime || item.timestamp);
-        if (!isToday) return false;
+      if (!isTimestampRecent(item.creationTime || item.timestamp, timeFilter)) {
+        return false;
       }
 
       // 2. Threat type filter
@@ -406,19 +486,123 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       // 3. Search query filter
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase();
+        const g = resolveItemGeo(item);
         const ipMatch = item.ip.toLowerCase().includes(q);
         const reasonMatch = (item.reason || '').toLowerCase().includes(q);
-        const countryMatch = (item.countryName || item.country || '').toLowerCase().includes(q);
-        if (!ipMatch && !reasonMatch && !countryMatch) return false;
+        const countryMatch = (g.countryName || g.countryCode).toLowerCase().includes(q);
+        const cityMatch = g.cityName.toLowerCase().includes(q);
+        if (!ipMatch && !reasonMatch && !countryMatch && !cityMatch) return false;
       }
 
       return true;
     });
-  }, [blockedIps, timeFilter, threatTypeFilter, searchQuery]);
+  }, [blockedIps, timeFilter, threatTypeFilter, searchQuery, liveRawIpMap]);
+
+  // Helper to resolve canonical country & city coordinates for an IP item
+  // Ensures City, Country Code, Country Name, and Flag Emoji are 100% synchronized
+  const resolveItemGeo = (item: BlockedIpItem) => {
+    const liveMatch = liveRawIpMap.get(item.ip);
+    const geo = lookupIpLocation(item.ip);
+
+    // Prioritize Live Raw Logs (confirmed accurate and true source of truth)
+    let countryHint = liveMatch?.country;
+    let cityHint = liveMatch?.city;
+    let flagHint = liveMatch?.flag;
+    let nameHint = liveMatch?.countryName;
+
+    // If no live match or generic, use geo and item
+    if (!countryHint || countryHint === 'XX' || countryHint === 'GLOBAL') {
+      // Check if item has specific country (avoiding stale US ARIN override when geo has specific regional country)
+      if (item.country && item.country !== 'GLOBAL' && item.country !== 'XX' && !(item.country === 'US' && geo.country && geo.country !== 'US')) {
+        countryHint = item.country;
+        nameHint = item.countryName;
+        flagHint = item.flag;
+      } else {
+        countryHint = geo.country;
+        nameHint = geo.countryName;
+        flagHint = geo.flag;
+      }
+    }
+
+    if (!cityHint) {
+      cityHint = item.city || geo.city;
+    }
+
+    // Now resolve coordinates and enforce mutual synchrony:
+    // A city's country and flag ALWAYS strictly align with that city
+    const resolved = resolveCityCoordinates(cityHint, countryHint, item.ip);
+
+    // Obtain canonical standardized metadata
+    const canonical = getCanonicalCountryInfo(resolved.countryCode, resolved.flag, resolved.countryName);
+
+    return {
+      countryCode: canonical.code,
+      countryName: canonical.name,
+      flag: canonical.flag,
+      cityName: resolved.city,
+      lat: resolved.lat,
+      lon: resolved.lon,
+      isp: liveMatch?.asName || item.isp || geo.isp || 'Cloud / Hosting Network',
+    };
+  };
+
+  // High-Precision City Aggregates
+  const cityThreatAggregates = useMemo(() => {
+    const map = new Map<string, {
+      key: string;
+      cityName: string;
+      countryCode: string;
+      countryName: string;
+      flag: string;
+      lat: number;
+      lon: number;
+      totalIps: number;
+      totalAttacks: number;
+      scenarios: Map<string, number>;
+      ips: BlockedIpItem[];
+      trajectory: [number, number][];
+      isp?: string;
+    }>();
+
+    filteredIps.forEach((item) => {
+      const g = resolveItemGeo(item);
+      const key = `${g.countryCode}_${g.cityName}`;
+
+      if (!map.has(key)) {
+        const traj = generateCurvedTrajectory([g.lat, g.lon], [TARGET_LOCATION.lat, TARGET_LOCATION.lon]);
+        map.set(key, {
+          key,
+          cityName: g.cityName,
+          countryCode: g.countryCode,
+          countryName: g.countryName,
+          flag: g.flag,
+          lat: g.lat,
+          lon: g.lon,
+          totalIps: 0,
+          totalAttacks: 0,
+          scenarios: new Map(),
+          ips: [],
+          trajectory: traj,
+          isp: g.isp,
+        });
+      }
+
+      const entry = map.get(key)!;
+      entry.totalIps += 1;
+      entry.totalAttacks += item.count || 1;
+      entry.ips.push(item);
+
+      const scenario = item.reason || 'http:scan';
+      entry.scenarios.set(scenario, (entry.scenarios.get(scenario) || 0) + (item.count || 1));
+    });
+
+    return Array.from(map.values()).sort((a, b) => b.totalAttacks - a.totalAttacks);
+  }, [filteredIps, liveRawIpMap]);
 
   // Aggregate attacks by Country with Exact Coordinates
   const countryThreatAggregates = useMemo(() => {
     const map = new Map<string, {
+      key: string;
       code: string;
       name: string;
       flag: string;
@@ -433,17 +617,10 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     }>();
 
     filteredIps.forEach((item) => {
-      const geo = lookupIpLocation(item.ip);
-      const rawCountry = item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country;
-      const rawName = item.countryName && item.countryName !== 'RouterOS Address-List' && item.countryName !== 'Global Community Blocklist'
-        ? item.countryName
-        : geo.countryName;
-      const rawFlag = item.flag && item.flag !== '🌐' ? item.flag : geo.flag;
-
-      const canonical = getCanonicalCountryInfo(rawCountry, rawFlag, rawName);
-      const code = canonical.code;
-      const name = canonical.name;
-      const flag = canonical.flag;
+      const g = resolveItemGeo(item);
+      const code = g.countryCode;
+      const name = g.countryName;
+      const flag = g.flag;
 
       const coords = COUNTRY_COORDINATES[code] || {
         lat: 20 + ((code.charCodeAt(0) * 3) % 40) - 20,
@@ -455,6 +632,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       if (!map.has(code)) {
         const traj = generateCurvedTrajectory([coords.lat, coords.lon], [TARGET_LOCATION.lat, TARGET_LOCATION.lon]);
         map.set(code, {
+          key: code,
           code,
           name,
           flag,
@@ -479,14 +657,57 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalAttacks - a.totalAttacks);
-  }, [filteredIps]);
+  }, [filteredIps, liveRawIpMap]);
 
-  // Overall summary metrics for today
+  // Active threat nodes for the map (either city-level or country-level)
+  const activeThreatNodes = useMemo(() => {
+    if (viewGranularity === 'city') {
+      return cityThreatAggregates.map((c) => ({
+        key: c.key,
+        code: c.key,
+        title: `${c.cityName}, ${c.countryName}`,
+        cityName: c.cityName,
+        countryCode: c.countryCode,
+        countryName: c.countryName,
+        flag: c.flag,
+        lat: c.lat,
+        lon: c.lon,
+        totalIps: c.totalIps,
+        totalAttacks: c.totalAttacks,
+        scenarios: c.scenarios,
+        ips: c.ips,
+        trajectory: c.trajectory,
+        isp: c.isp,
+        isCity: true,
+      }));
+    }
+    return countryThreatAggregates.map((c) => ({
+      key: c.code,
+      code: c.code,
+      title: c.name,
+      cityName: undefined,
+      countryCode: c.code,
+      countryName: c.name,
+      flag: c.flag,
+      lat: c.lat,
+      lon: c.lon,
+      totalIps: c.totalIps,
+      totalAttacks: c.totalAttacks,
+      scenarios: c.scenarios,
+      ips: c.ips,
+      trajectory: c.trajectory,
+      isp: undefined,
+      isCity: false,
+    }));
+  }, [viewGranularity, cityThreatAggregates, countryThreatAggregates]);
+
+  // Overall summary metrics
   const totalAttacksToday = useMemo(() => {
     return filteredIps.reduce((acc, curr) => acc + (curr.count || 1), 0);
   }, [filteredIps]);
 
   const uniqueCountriesCount = countryThreatAggregates.length;
+  const uniqueCitiesCount = cityThreatAggregates.length;
 
   const topScenarioToday = useMemo(() => {
     const scMap: Record<string, number> = {};
@@ -518,7 +739,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 <h3 className="text-base font-bold text-white flex items-center gap-2">
                   GeoIP Threat Map & Attack Origins
                   <span className="px-2 py-0.5 rounded-md bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-mono uppercase tracking-wider">
-                    {timeFilter === 'today' ? 'Live Harian (Hari Ini)' : 'Semua Data'}
+                    {timeFilter === 'today' ? 'Live Harian (Hari Ini)' : timeFilter === '24h' ? '24 Jam Terakhir' : 'Semua Data'}
                   </span>
                 </h3>
                 <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping"></span>
@@ -529,8 +750,41 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             </div>
           </div>
 
-          {/* Quick Actions & Time Range Switch */}
+          {/* Quick Actions & View Granularity Switch */}
           <div className="flex flex-wrap items-center gap-2">
+            {/* View Granularity: City vs Country */}
+            <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
+              <span className="text-slate-500 px-2 flex items-center gap-1 font-semibold">
+                Resolusi:
+              </span>
+              <button
+                type="button"
+                onClick={() => setViewGranularity('city')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                  viewGranularity === 'city' ? 'bg-rose-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Tampilkan titik koordinat kota presisi asal penyerang (Sydney, Ashburn, Frankfurt, Tokyo, dll.)"
+              >
+                <span>🏙️ Titik Kota Presisi</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-rose-950/80 text-rose-200 font-mono">
+                  {uniqueCitiesCount}
+                </span>
+              </button>
+              <button
+                type="button"
+                onClick={() => setViewGranularity('country')}
+                className={`px-2.5 py-1 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                  viewGranularity === 'country' ? 'bg-purple-600 text-white shadow' : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Tampilkan titik per negara makro"
+              >
+                <span>🌍 Level Negara</span>
+                <span className="text-[10px] px-1.5 py-0.2 rounded bg-purple-950/80 text-purple-200 font-mono">
+                  {uniqueCountriesCount}
+                </span>
+              </button>
+            </div>
+
             {/* Tile Layer Style Switcher */}
             <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
               <span className="text-slate-500 px-2 flex items-center gap-1 font-semibold">
@@ -583,7 +837,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             <div className="flex items-center bg-slate-950 p-1 rounded-xl border border-slate-800 text-xs">
               <button
                 onClick={() => setTimeFilter('today')}
-                className={`px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 rounded-lg font-bold transition flex items-center gap-1 ${
                   timeFilter === 'today'
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
@@ -591,11 +845,22 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 title="Tampilkan hanya serangan yang tercatat pada hari ini"
               >
                 <Clock className="w-3.5 h-3.5" />
-                <span>Hari Ini ({blockedIps.filter(i => isTimestampToday(i.creationTime || i.timestamp)).length} IP)</span>
+                <span>Hari Ini ({todayCount})</span>
+              </button>
+              <button
+                onClick={() => setTimeFilter('24h')}
+                className={`px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1 ${
+                  timeFilter === '24h'
+                    ? 'bg-purple-600 text-white shadow'
+                    : 'text-slate-400 hover:text-slate-200'
+                }`}
+                title="Tampilkan serangan dalam 24-48 jam terakhir"
+              >
+                <span>24 Jam ({recent24hCount})</span>
               </button>
               <button
                 onClick={() => setTimeFilter('all')}
-                className={`px-3 py-1.5 rounded-lg font-medium transition flex items-center gap-1.5 ${
+                className={`px-2.5 py-1.5 rounded-lg font-medium transition flex items-center gap-1 ${
                   timeFilter === 'all'
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
@@ -608,11 +873,37 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
           </div>
         </div>
 
-        {/* 4 Summary Stat Cards Focus: Hari Ini */}
+        {/* Informative Alert Banner when Today is 0 but Address-List has items */}
+        {timeFilter === 'today' && filteredIps.length === 0 && blockedIps.length > 0 && (
+          <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
+            <div className="flex items-center gap-2">
+              <Clock className="w-4 h-4 text-amber-400 shrink-0" />
+              <span>
+                Tidak ada entri serangan baru pada tanggal hari ini. Tersedia <strong>{blockedIps.length} entri IP</strong> tersimpan dalam MikroTik Address-List.
+              </span>
+            </div>
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                onClick={() => setTimeFilter('24h')}
+                className="px-2.5 py-1 bg-amber-500/20 hover:bg-amber-500/30 text-amber-200 border border-amber-500/40 rounded-lg font-bold transition"
+              >
+                Tampilkan 24 Jam Terakhir ({recent24hCount} IP)
+              </button>
+              <button
+                onClick={() => setTimeFilter('all')}
+                className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-bold transition"
+              >
+                Tampilkan Semua Data ({blockedIps.length} IP)
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* 4 Summary Stat Cards */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
           <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-purple-500/40 transition">
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="font-medium">Total IP Terblokir ({timeFilter === 'today' ? 'Hari Ini' : 'Total'})</span>
+              <span className="font-medium">Total IP Terblokir ({timeFilter === 'today' ? 'Hari Ini' : timeFilter === '24h' ? '24 Jam' : 'Total'})</span>
               <ShieldAlert className="w-4 h-4 text-purple-400" />
             </div>
             <div className="text-2xl font-black text-purple-300 font-mono mt-1 flex items-baseline gap-2">
@@ -626,20 +917,32 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
 
           <div className="p-4 bg-slate-950/80 rounded-xl border border-slate-800/80 hover:border-cyan-500/40 transition">
             <div className="flex items-center justify-between text-xs text-slate-400">
-              <span className="font-medium">Negara Asal Terdeteksi</span>
+              <span className="font-medium">
+                {viewGranularity === 'city' ? 'Titik Kota Terdeteksi' : 'Negara Asal Terdeteksi'}
+              </span>
               <Globe className="w-4 h-4 text-cyan-400" />
             </div>
             <div className="text-2xl font-black text-cyan-300 font-mono mt-1 flex items-baseline gap-2">
-              {uniqueCountriesCount} <span className="text-xs font-normal text-slate-500">Negara</span>
+              {viewGranularity === 'city' ? uniqueCitiesCount : uniqueCountriesCount}{' '}
+              <span className="text-xs font-normal text-slate-500">
+                {viewGranularity === 'city' ? 'Titik Kota' : 'Negara'}
+              </span>
             </div>
             <div className="text-[11px] text-slate-400 mt-1 flex items-center gap-1 truncate font-mono">
               <span>Top:</span>
-              {countryThreatAggregates.slice(0, 3).map((c) => (
-                <span key={c.code} className="inline-flex items-center gap-0.5 text-slate-300">
-                  <CountryFlag countryCode={c.code} flagEmoji={c.flag} size="sm" />
-                  {c.code}
-                </span>
-              ))}
+              {viewGranularity === 'city'
+                ? cityThreatAggregates.slice(0, 3).map((c) => (
+                    <span key={c.key} className="inline-flex items-center gap-0.5 text-slate-300">
+                      <CountryFlag countryCode={c.countryCode} flagEmoji={c.flag} size="sm" />
+                      {c.cityName}
+                    </span>
+                  ))
+                : countryThreatAggregates.slice(0, 3).map((c) => (
+                    <span key={c.code} className="inline-flex items-center gap-0.5 text-slate-300">
+                      <CountryFlag countryCode={c.code} flagEmoji={c.flag} size="sm" />
+                      {c.code}
+                    </span>
+                  ))}
             </div>
           </div>
 
@@ -678,7 +981,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
             <input
               type="text"
-              placeholder="Cari berdasarkan IP, negara (US, DE, CN), atau tipe ancaman..."
+              placeholder="Cari IP, kota (Sydney, Frankfurt, Ashburn), negara (AU, DE, US), atau skenario..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
@@ -738,7 +1041,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
               }`}
             >
               <BarChart3 className="w-3.5 h-3.5" />
-              <span>Top Origins ({countryThreatAggregates.length})</span>
+              <span>Top Origins ({viewGranularity === 'city' ? uniqueCitiesCount : uniqueCountriesCount})</span>
             </button>
             <button
               onClick={() => setActiveTab('stream')}
@@ -761,13 +1064,17 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             <div className="flex items-center gap-2 text-xs font-mono text-slate-400">
               <span className="inline-block w-2.5 h-2.5 rounded-full bg-rose-500 animate-ping"></span>
               <span className="text-slate-200 font-bold">Live Threat Trajectory:</span>
-              <span>Negara Penyerang &rarr; MikroTik CCR1036 Gateway (Merauke, Indonesia)</span>
+              <span>
+                {viewGranularity === 'city' ? 'Titik Kota Penyerang' : 'Negara Penyerang'} &rarr; MikroTik CCR1036 Gateway (Merauke, Indonesia)
+              </span>
             </div>
 
             <div className="flex items-center gap-3 text-xs">
               <div className="flex items-center gap-1.5 text-slate-400 font-mono">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
-                <span>Asal Serangan ({uniqueCountriesCount} Negara)</span>
+                <span>
+                  Asal Serangan ({viewGranularity === 'city' ? `${uniqueCitiesCount} Kota` : `${uniqueCountriesCount} Negara`})
+                </span>
               </div>
               <div className="flex items-center gap-1.5 text-slate-400 font-mono">
                 <span className="w-2.5 h-2.5 rounded-full bg-emerald-400"></span>
@@ -777,9 +1084,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
           </div>
 
           {/* REAL LEAFLET MAP CANVAS */}
-          <div className="relative w-full h-[520px] rounded-xl border border-slate-800 overflow-hidden shadow-inner z-0">
+          <div className="relative w-full h-[540px] rounded-xl border border-slate-800 overflow-hidden shadow-inner z-0">
             <MapContainer
-              center={[15, 60]}
+              center={[10, 80]}
               zoom={2.5}
               minZoom={2}
               maxZoom={12}
@@ -802,16 +1109,16 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 />
               )}
 
-              {/* Threat Trajectory Arcs */}
-              {countryThreatAggregates.map((country) => {
-                const isSelected = selectedCountry === country.code;
+              {/* Threat Trajectory Arcs (From City or Country to Merauke) */}
+              {activeThreatNodes.map((node) => {
+                const isSelected = selectedNodeKey === node.key;
                 return (
                   <Polyline
-                    key={`line-${country.code}`}
-                    positions={country.trajectory}
+                    key={`line-${node.key}`}
+                    positions={node.trajectory}
                     pathOptions={{
-                      color: isSelected ? '#fb7185' : '#f43f5e',
-                      weight: isSelected ? 3.5 : Math.max(1.2, Math.min(2.8, country.totalAttacks / 15)),
+                      color: isSelected ? '#38bdf8' : '#f43f5e',
+                      weight: isSelected ? 3.5 : Math.max(1.2, Math.min(3, node.totalAttacks / 10)),
                       opacity: isSelected ? 0.95 : 0.65,
                       dashArray: '6, 6',
                     }}
@@ -819,13 +1126,13 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 );
               })}
 
-              {/* Animated Glowing Attack Missile Balls / Particles flying along trajectories */}
+              {/* Animated Glowing Attack Missile Balls / Energy Beams traveling along trajectories */}
               <AnimatedAttackMissiles
-                countries={countryThreatAggregates.map((c) => ({
-                  code: c.code,
-                  trajectory: c.trajectory,
-                  totalAttacks: c.totalAttacks,
-                  isSelected: selectedCountry === c.code,
+                countries={activeThreatNodes.map((node) => ({
+                  code: node.code,
+                  trajectory: node.trajectory,
+                  totalAttacks: node.totalAttacks,
+                  isSelected: selectedNodeKey === node.key,
                 }))}
               />
 
@@ -835,54 +1142,119 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 icon={createTargetIcon()}
               >
                 <Popup className="custom-leaflet-popup">
-                  <div className="p-2 text-slate-900 text-xs font-mono">
-                    <div className="font-bold text-emerald-700 text-sm flex items-center gap-1">
+                  <div className="p-2.5 text-slate-900 text-xs font-mono">
+                    <div className="font-bold text-emerald-700 text-sm flex items-center gap-1.5">
                       <span>🎯 {TARGET_LOCATION.name}</span>
                     </div>
                     <div className="text-slate-600 mt-1">{TARGET_LOCATION.locationName}</div>
-                    <div className="mt-1 font-bold text-slate-800">IP: {TARGET_LOCATION.ip}</div>
-                    <div className="mt-1 text-[11px] text-emerald-600 font-bold">100% RAW Firewall Drop (Active)</div>
+                    <div className="mt-1 font-bold text-slate-800">IP Gateway: {TARGET_LOCATION.ip}</div>
+                    <div className="mt-1 text-[11px] text-emerald-600 font-bold flex items-center gap-1">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                      100% RAW Hardware Drop (Active)
+                    </div>
                   </div>
                 </Popup>
               </Marker>
 
-              {/* Origin Country Threat Markers */}
-              {countryThreatAggregates.map((country) => {
-                const isSelected = selectedCountry === country.code;
+              {/* Origin Threat Markers (City or Country granularity) */}
+              {activeThreatNodes.map((node) => {
+                const isSelected = selectedNodeKey === node.key;
                 return (
                   <Marker
-                    key={`marker-${country.code}`}
-                    position={[country.lat, country.lon]}
-                    icon={createOriginIcon(country.code, country.flag, country.totalIps, isSelected)}
+                    key={`marker-${node.key}`}
+                    position={[node.lat, node.lon]}
+                    icon={
+                      node.isCity
+                        ? createCityIcon(node.cityName!, node.countryCode, node.flag, node.totalIps, isSelected)
+                        : createOriginIcon(node.countryCode, node.flag, node.totalIps, isSelected)
+                    }
                     eventHandlers={{
                       click: () => {
-                        setSelectedCountry(isSelected ? null : country.code);
+                        setSelectedNodeKey(isSelected ? null : node.key);
                       },
                     }}
                   >
                     <Popup className="custom-leaflet-popup">
-                      <div className="p-2 text-slate-900 text-xs min-w-[200px]">
-                        <div className="flex items-center justify-between gap-2 border-b pb-1.5">
+                      <div className="p-2.5 text-slate-900 text-xs min-w-[240px]">
+                        <div className="flex items-center justify-between gap-2 border-b pb-2">
                           <span className="font-bold text-sm text-slate-900 flex items-center gap-1.5">
-                            <CountryFlag countryCode={country.code} flagEmoji={country.flag} size="sm" />
-                            <span>{country.name}</span>
+                            <CountryFlag countryCode={node.countryCode} flagEmoji={node.flag} size="sm" />
+                            <span>{node.title}</span>
                           </span>
                           <span className="bg-rose-100 text-rose-700 px-1.5 py-0.5 rounded font-mono font-bold text-[10px]">
-                            {country.code}
+                            {node.countryCode}
                           </span>
                         </div>
+
                         <div className="mt-2 space-y-1 font-mono text-[11px]">
+                          {node.isCity && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">🏙️ Titik Kota:</span>
+                              <span className="font-bold text-slate-800">{node.cityName}</span>
+                            </div>
+                          )}
                           <div className="flex justify-between">
-                            <span className="text-slate-500">Total IP:</span>
-                            <span className="font-bold text-rose-600">{country.totalIps} IP</span>
+                            <span className="text-slate-500">📍 Koordinat:</span>
+                            <span className="font-bold text-slate-700">
+                              {node.lat.toFixed(4)}, {node.lon.toFixed(4)}
+                            </span>
+                          </div>
+                          {node.isp && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">🏢 Provider / Cloud:</span>
+                              <span className="font-bold text-slate-800 text-right truncate max-w-[130px]" title={node.isp}>
+                                {node.isp}
+                              </span>
+                            </div>
+                          )}
+                          <div className="flex justify-between">
+                            <span className="text-slate-500">🛡️ Total IP Penyerang:</span>
+                            <span className="font-bold text-rose-600">{node.totalIps} IP</span>
                           </div>
                           <div className="flex justify-between">
-                            <span className="text-slate-500">Total Serangan:</span>
-                            <span className="font-bold text-slate-800">{country.totalAttacks} Events</span>
+                            <span className="text-slate-500">⚡ Total Serangan:</span>
+                            <span className="font-bold text-slate-800">{node.totalAttacks} Events</span>
                           </div>
                           <div className="flex justify-between">
                             <span className="text-slate-500">Skenario Dominan:</span>
-                            <span className="font-bold text-amber-700">{String(Array.from(country.scenarios.keys())[0] || 'scan').replace(/^crowdsecurity\//, '')}</span>
+                            <span className="font-bold text-amber-700">
+                              {String(Array.from(node.scenarios.keys())[0] || 'scan').replace(/^crowdsecurity\//, '')}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* List of sample IPs in this location */}
+                        <div className="mt-2.5 pt-2 border-t text-[10px] space-y-1">
+                          <span className="text-slate-500 font-semibold block">Daftar IP di Titik Ini:</span>
+                          <div className="max-h-24 overflow-y-auto space-y-1 pr-1 font-mono">
+                            {node.ips.slice(0, 5).map((ipItem) => (
+                              <div key={ipItem.ip} className="flex items-center justify-between bg-slate-100 px-1.5 py-0.5 rounded">
+                                <span className="font-bold text-slate-800">{ipItem.ip}</span>
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    onClick={() => handleCopy(ipItem.ip)}
+                                    className="text-slate-400 hover:text-slate-700 p-0.5"
+                                    title="Salin IP"
+                                  >
+                                    {copiedIp === ipItem.ip ? <Check className="w-3 h-3 text-emerald-600" /> : <Copy className="w-3 h-3" />}
+                                  </button>
+                                  {onRemoveIp && (
+                                    <button
+                                      onClick={() => onRemoveIp(ipItem.ip)}
+                                      className="text-rose-600 hover:text-rose-800 font-bold ml-1 text-[9px]"
+                                      title="Unban IP"
+                                    >
+                                      Unban
+                                    </button>
+                                  )}
+                                </div>
+                              </div>
+                            ))}
+                            {node.ips.length > 5 && (
+                              <div className="text-center text-slate-400 text-[9px]">
+                                +{node.ips.length - 5} IP lainnya
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -896,43 +1268,59 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             <div className="absolute bottom-4 left-4 bg-slate-900/90 border border-purple-500/40 rounded-xl p-3 shadow-2xl backdrop-blur-md text-xs font-mono z-[1000] max-w-xs pointer-events-auto">
               <div className="text-slate-300 font-bold text-[11px] mb-1 flex items-center gap-1.5">
                 <Globe className="w-3.5 h-3.5 text-purple-400" />
-                <span>Navigasi Peta Asli Dunia</span>
+                <span>Navigasi Peta GIS Interaktif</span>
               </div>
               <p className="text-[10px] text-slate-400">
-                Gunakan scroll mouse atau sentuhan untuk Zoom In / Out ke detail kota/negara. Klik ikon lingkaran merah untuk melihat detail ancaman.
+                Mode saat ini: <strong className="text-rose-400">{viewGranularity === 'city' ? 'Titik Kota Presisi' : 'Per Negara'}</strong>.
+                Gunakan scroll untuk Zoom In/Out ke detail jalan/kota. Klik titik marker untuk detail IP dan koordinat lengkap.
               </p>
             </div>
           </div>
         </div>
       )}
 
-      {/* Top 10 Attack Origin Countries Leaderboard */}
+      {/* Top Attack Origins Leaderboard (City or Country) */}
       {(activeTab === 'leaderboard' || activeTab === 'map') && (
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <BarChart3 className="w-5 h-5 text-purple-400" />
               <h4 className="text-sm font-bold text-white">
-                Top Negara Asal Serangan ({timeFilter === 'today' ? 'Hari Ini' : 'Semua'})
+                Top Asal Serangan ({viewGranularity === 'city' ? 'Kota' : 'Negara'}) &bull;{' '}
+                {timeFilter === 'today' ? 'Hari Ini' : timeFilter === '24h' ? '24 Jam Terakhir' : 'Semua Data'}
               </h4>
               <span className="text-xs text-slate-400">
-                ({countryThreatAggregates.length} Negara Terdeteksi)
+                ({viewGranularity === 'city' ? `${uniqueCitiesCount} Kota` : `${uniqueCountriesCount} Negara`})
               </span>
             </div>
-            <span className="text-xs font-mono text-slate-400">
-              Diurutkan berdasarkan intensitas serangan tertinggi
-            </span>
+            <div className="flex items-center gap-2">
+              <div className="flex items-center bg-slate-950 p-0.5 rounded-lg border border-slate-800 text-[11px]">
+                <button
+                  onClick={() => setViewGranularity('city')}
+                  className={`px-2 py-0.5 rounded ${viewGranularity === 'city' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400'}`}
+                >
+                  Per Kota
+                </button>
+                <button
+                  onClick={() => setViewGranularity('country')}
+                  className={`px-2 py-0.5 rounded ${viewGranularity === 'country' ? 'bg-purple-600 text-white font-bold' : 'text-slate-400'}`}
+                >
+                  Per Negara
+                </button>
+              </div>
+              <span className="text-xs font-mono text-slate-400">Diurutkan intensitas tertinggi</span>
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-            {countryThreatAggregates.slice(0, 9).map((country, idx) => {
-              const pct = totalAttacksToday > 0 ? Math.round((country.totalAttacks / totalAttacksToday) * 100) : 0;
-              const isSelected = selectedCountry === country.code;
+            {activeThreatNodes.slice(0, 9).map((node, idx) => {
+              const pct = totalAttacksToday > 0 ? Math.round((node.totalAttacks / totalAttacksToday) * 100) : 0;
+              const isSelected = selectedNodeKey === node.key;
 
               return (
                 <div
-                  key={country.code}
-                  onClick={() => setSelectedCountry(isSelected ? null : country.code)}
+                  key={node.key}
+                  onClick={() => setSelectedNodeKey(isSelected ? null : node.key)}
                   className={`p-3.5 rounded-xl border transition cursor-pointer ${
                     isSelected
                       ? 'bg-purple-950/40 border-purple-500 shadow-md shadow-purple-950/40'
@@ -942,21 +1330,25 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                   <div className="flex items-center justify-between mb-2">
                     <div className="flex items-center gap-2">
                       <span className="w-5 text-center text-xs font-mono font-bold text-slate-500">#{idx + 1}</span>
-                      <CountryFlag countryCode={country.code} flagEmoji={country.flag} size="md" />
+                      <CountryFlag countryCode={node.countryCode} flagEmoji={node.flag} size="md" />
                       <div>
-                        <span className="font-bold text-slate-200 text-xs block">{country.name}</span>
-                        <span className="text-[10px] text-slate-400 font-mono">{country.code} &bull; {country.continent}</span>
+                        <span className="font-bold text-slate-200 text-xs block truncate max-w-[150px]">
+                          {node.isCity ? `${node.cityName}, ${node.countryCode}` : node.countryName}
+                        </span>
+                        <span className="text-[10px] text-slate-400 font-mono">
+                          {node.isCity ? `${node.lat.toFixed(2)}, ${node.lon.toFixed(2)}` : node.countryCode}
+                        </span>
                       </div>
                     </div>
                     <span className="px-2 py-0.5 rounded bg-rose-500/10 text-rose-400 border border-rose-500/20 text-xs font-bold font-mono">
-                      {country.totalIps} IP
+                      {node.totalIps} IP
                     </span>
                   </div>
 
                   {/* Progress Bar */}
                   <div className="space-y-1">
                     <div className="flex justify-between text-[10px] text-slate-400 font-mono">
-                      <span>{country.totalAttacks} Serangan</span>
+                      <span>{node.totalAttacks} Serangan</span>
                       <span>{pct}% Total</span>
                     </div>
                     <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
@@ -967,10 +1359,10 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                     </div>
                   </div>
 
-                  {/* Dominant scenario tag */}
+                  {/* Dominant scenario tag & City label */}
                   <div className="mt-2.5 pt-2 border-t border-slate-800/60 flex items-center justify-between text-[10px] text-slate-400 font-mono">
-                    <span className="truncate max-w-[170px]" title={Array.from(country.scenarios.keys())[0] || ''}>
-                      {String(Array.from(country.scenarios.keys())[0] || 'http:scan').replace(/^crowdsecurity\//, '')}
+                    <span className="truncate max-w-[170px]" title={Array.from(node.scenarios.keys())[0] || ''}>
+                      {String(Array.from(node.scenarios.keys())[0] || 'http:scan').replace(/^crowdsecurity\//, '')}
                     </span>
                     <span className="text-emerald-400 font-semibold">RAW DROP</span>
                   </div>
@@ -981,18 +1373,18 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
         </div>
       )}
 
-      {/* Live Threat Ticker Stream (Today Focus) */}
+      {/* Live Threat Ticker Stream */}
       {(activeTab === 'stream' || activeTab === 'map') && (
         <div className="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 shadow-lg space-y-4">
           <div className="flex items-center justify-between pb-3 border-b border-slate-800">
             <div className="flex items-center gap-2">
               <Radio className="w-4 h-4 text-rose-400 animate-pulse" />
               <h4 className="text-sm font-bold text-white">
-                Live Attack Stream Ticker ({timeFilter === 'today' ? 'Hari Ini' : 'Terbaru'})
+                Live Attack Stream Ticker ({timeFilter === 'today' ? 'Hari Ini' : timeFilter === '24h' ? '24 Jam Terakhir' : 'Semua Data'})
               </h4>
             </div>
             <span className="text-xs font-mono text-slate-400">
-              Menampilkan {Math.min(15, filteredIps.length)} dari {filteredIps.length} entri IP
+              Menampilkan {Math.min(20, filteredIps.length)} dari {filteredIps.length} entri IP
             </span>
           </div>
 
@@ -1000,8 +1392,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             <table className="w-full text-left text-xs border-collapse">
               <thead>
                 <tr className="border-b border-slate-800 text-[11px] text-slate-400 font-semibold bg-slate-950/60">
-                  <th className="py-2.5 px-3">Negara Asal</th>
-                  <th className="py-2.5 px-3">IP Penyerang</th>
+                  <th className="py-2.5 px-3">Kota & Negara Asal</th>
+                  <th className="py-2.5 px-3">IP Penyerang & ISP</th>
+                  <th className="py-2.5 px-3">Koordinat Presisi</th>
                   <th className="py-2.5 px-3">Alasan / Skenario</th>
                   <th className="py-2.5 px-3">Waktu Masuk Address-List</th>
                   <th className="py-2.5 px-3">Mitigasi MikroTik</th>
@@ -1011,40 +1404,54 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
               <tbody className="divide-y divide-slate-800/60">
                 {filteredIps.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-8 text-center text-slate-500">
+                    <td colSpan={7} className="py-8 text-center text-slate-500">
                       Tidak ada data IP penyerang yang cocok dengan filter.
                     </td>
                   </tr>
                 ) : (
-                  filteredIps.slice(0, 15).map((item, idx) => {
-                    const geo = lookupIpLocation(item.ip);
-                    const code = item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country;
-                    const name = item.countryName && item.countryName !== 'RouterOS Address-List' ? item.countryName : geo.countryName;
-                    const flag = item.flag && item.flag !== '🌐' ? item.flag : geo.flag;
+                  filteredIps.slice(0, 20).map((item, idx) => {
+                    const g = resolveItemGeo(item);
 
                     return (
                       <tr key={item.ip || idx} className="hover:bg-slate-950/80 transition">
                         <td className="py-2.5 px-3 whitespace-nowrap">
                           <div className="flex items-center gap-2">
-                            <CountryFlag countryCode={code} flagEmoji={flag} size="md" />
-                            <span className="font-medium text-slate-200">{name}</span>
-                            <span className="text-[10px] px-1.5 py-0.5 rounded bg-slate-800 text-slate-400 font-mono">
-                              {code}
-                            </span>
+                            <CountryFlag countryCode={g.countryCode} flagEmoji={g.flag} size="md" />
+                            <div>
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-bold text-slate-200">{g.cityName}</span>
+                                <span className="text-[10px] px-1.5 py-0.2 rounded bg-slate-800 text-slate-400 font-mono">
+                                  {g.countryCode}
+                                </span>
+                              </div>
+                              <span className="text-[10px] text-slate-400 font-mono block">
+                                {g.countryName}
+                              </span>
+                            </div>
                           </div>
                         </td>
 
                         <td className="py-2.5 px-3 font-mono">
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-rose-300 font-bold">{item.ip}</span>
-                            <button
-                              onClick={() => handleCopy(item.ip)}
-                              className="text-slate-500 hover:text-slate-300 p-0.5"
-                              title="Salin IP"
-                            >
-                              {copiedIp === item.ip ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
-                            </button>
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="text-rose-300 font-bold">{item.ip}</span>
+                              <button
+                                onClick={() => handleCopy(item.ip)}
+                                className="text-slate-500 hover:text-slate-300 p-0.5"
+                                title="Salin IP"
+                              >
+                                {copiedIp === item.ip ? <Check className="w-3 h-3 text-emerald-400" /> : <Copy className="w-3 h-3" />}
+                              </button>
+                            </div>
+                            <span className="text-[10px] text-slate-400 truncate max-w-[170px] block" title={g.isp}>
+                              {g.isp}
+                            </span>
                           </div>
+                        </td>
+
+                        <td className="py-2.5 px-3 font-mono text-[11px] text-slate-300 whitespace-nowrap">
+                          <span className="text-cyan-400 font-bold">{g.lat.toFixed(4)}</span>,{' '}
+                          <span className="text-cyan-400 font-bold">{g.lon.toFixed(4)}</span>
                         </td>
 
                         <td className="py-2.5 px-3">
@@ -1053,21 +1460,21 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                           </span>
                         </td>
 
-                        <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px]">
+                        <td className="py-2.5 px-3 font-mono text-slate-400 text-[11px] whitespace-nowrap">
                           {item.creationTime || item.timestamp || 'Hari Ini'}
                         </td>
 
-                        <td className="py-2.5 px-3">
+                        <td className="py-2.5 px-3 whitespace-nowrap">
                           <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold font-mono">
                             RAW DROP ({item.listName || 'crowdsec'})
                           </span>
                         </td>
 
-                        <td className="py-2.5 px-3 text-right">
+                        <td className="py-2.5 px-3 text-right whitespace-nowrap">
                           {onRemoveIp && (
                             <button
                               onClick={() => onRemoveIp(item.ip)}
-                              className="text-slate-500 hover:text-rose-400 text-xs px-2 py-1 rounded hover:bg-rose-950/30 transition"
+                              className="text-slate-500 hover:text-rose-400 text-xs px-2 py-1 rounded hover:bg-rose-950/30 transition font-mono"
                               title="Hapus IP dari Address List"
                             >
                               Unban
@@ -1086,3 +1493,4 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     </div>
   );
 };
+

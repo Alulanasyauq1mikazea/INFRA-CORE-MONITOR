@@ -715,6 +715,20 @@ export const ServerVmMonitor: React.FC<ServerVmMonitorProps> = ({ serverNodes, o
   const [statusFilter, setStatusFilter] = useState<string>('all');
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [showDataFlowModal, setShowDataFlowModal] = useState<boolean>(false);
+
+  // Synchronize filter from external alerts / [11 VM OFF] badge click
+  useEffect(() => {
+    const handleFilterStopped = () => {
+      setStatusFilter('stopped');
+      setViewMode('grid');
+    };
+    if (window.location.hash.includes('stopped')) {
+      setStatusFilter('stopped');
+      setViewMode('grid');
+    }
+    window.addEventListener('filter_stopped_vms', handleFilterStopped);
+    return () => window.removeEventListener('filter_stopped_vms', handleFilterStopped);
+  }, []);
   
   // Live Prometheus Targets subscription for Server & Proxmox nodes
   const [hubServerTargets, setHubServerTargets] = useState<PrometheusTarget[]>([]);

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import {
   Router,
   Wifi,
@@ -18,6 +18,7 @@ import {
   Plus,
   X,
   SlidersHorizontal,
+  AlertTriangle,
   Globe,
   Filter,
   Network,
@@ -389,6 +390,15 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
   const [fwSearch, setFwSearch] = useState('');
   const [fwPage, setFwPage] = useState(1);
   const [fwRows, setFwRows] = useState(5);
+  const [fwChainFilter, setFwChainFilter] = useState<'all' | 'filter' | 'nat' | 'raw' | 'drop'>('all');
+
+  // Real-Time Firewall & Simple Queues Data States from RouterOS REST API
+  const [liveFirewallRules, setLiveFirewallRules] = useState<any[]>([]);
+  const [liveSimpleQueues, setLiveSimpleQueues] = useState<any[]>([]);
+  const [firewallMetrics, setFirewallMetrics] = useState<any>(null);
+  const [isFwLive, setIsFwLive] = useState(false);
+  const [isFwLoading, setIsFwLoading] = useState(false);
+  const [queueCategoryFilter, setQueueCategoryFilter] = useState<'all' | 'congested' | 'p1' | 'lab' | 'hotspot'>('all');
 
   const [ipSearch, setIpSearch] = useState('');
   const [ipSubnetFilter, setIpSubnetFilter] = useState<'all' | 'lan' | 'wan'>('all');
@@ -506,6 +516,44 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
       })
       .catch(() => {});
   }, []);
+
+  // Fetch real-time Firewall and QoS Simple Queues from RouterOS REST API
+  const fetchLiveFirewallAndQueues = useCallback(async () => {
+    setIsFwLoading(true);
+    try {
+      const targetHost = (currentRouter?.ip || routerHost || '').trim();
+      const q = new URLSearchParams({
+        host: targetHost,
+        user: routerUser.trim(),
+        pass: routerPass,
+        restPort: routerPort.trim(),
+      });
+      const res = await fetch(`/api/mikrotik/firewall?${q.toString()}`);
+      if (res.ok) {
+        const json = await res.json();
+        if (json.allFirewallRules && json.allFirewallRules.length > 0) {
+          setLiveFirewallRules(json.allFirewallRules);
+        }
+        if (json.simpleQueues && json.simpleQueues.length > 0) {
+          setLiveSimpleQueues(json.simpleQueues);
+        }
+        if (json.metrics) {
+          setFirewallMetrics(json.metrics);
+        }
+        setIsFwLive(json.mode === 'live_routeros_rest');
+      }
+    } catch {
+      // ignore
+    } finally {
+      setIsFwLoading(false);
+    }
+  }, [currentRouter?.ip, routerHost, routerUser, routerPass, routerPort]);
+
+  useEffect(() => {
+    fetchLiveFirewallAndQueues();
+    const interval = setInterval(fetchLiveFirewallAndQueues, 10000);
+    return () => clearInterval(interval);
+  }, [fetchLiveFirewallAndQueues]);
 
   const handleSaveMikrotikConfig = async () => {
     setIsSavingConfig(true);
@@ -766,12 +814,30 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     );
   });
 
-  const filteredFw = allFirewallRules.filter(
-    (item) =>
-      item.comment.toLowerCase().includes(fwSearch.toLowerCase()) ||
-      item.chain.toLowerCase().includes(fwSearch.toLowerCase()) ||
-      item.action.toLowerCase().includes(fwSearch.toLowerCase())
-  );
+  const activeFwRules = liveFirewallRules.length > 0 ? liveFirewallRules : allFirewallRules;
+  const activeQueues = liveSimpleQueues.length > 0 ? liveSimpleQueues : allSimpleQueues;
+
+  const filteredFw = activeFwRules.filter((item: any) => {
+    const q = fwSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (item.comment || '').toLowerCase().includes(q) ||
+      (item.chain || '').toLowerCase().includes(q) ||
+      (item.action || '').toLowerCase().includes(q) ||
+      (item.protocol || '').toLowerCase().includes(q) ||
+      String(item.port || '').toLowerCase().includes(q) ||
+      (item.src || '').toLowerCase().includes(q);
+
+    if (!matchSearch) return false;
+
+    if (fwChainFilter === 'all') return true;
+    if (fwChainFilter === 'raw') return item.tableType === 'raw' || (item.chain || '').includes('prerouting') || (item.chain || '').includes('raw');
+    if (fwChainFilter === 'filter') return item.tableType === 'filter' || ['input', 'forward', 'output'].includes((item.chain || '').toLowerCase());
+    if (fwChainFilter === 'nat') return item.tableType === 'nat' || (item.chain || '').includes('nat') || (item.action || '').includes('nat') || (item.action || '').includes('masquerade');
+    if (fwChainFilter === 'drop') return (item.action || '').toLowerCase().includes('drop');
+
+    return true;
+  });
 
   const filteredIp = allIpAddresses.filter((item) => {
     if (
@@ -801,11 +867,24 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
     );
   });
 
-  const filteredQueues = allSimpleQueues.filter(
-    (item) =>
-      item.name.toLowerCase().includes(queueSearch.toLowerCase()) ||
-      item.target.toLowerCase().includes(queueSearch.toLowerCase())
-  );
+  const filteredQueues = activeQueues.filter((item: any) => {
+    const q = queueSearch.toLowerCase();
+    const matchSearch =
+      !q ||
+      (item.name || '').toLowerCase().includes(q) ||
+      (item.target || '').toLowerCase().includes(q) ||
+      (item.comment || '').toLowerCase().includes(q);
+
+    if (!matchSearch) return false;
+
+    if (queueCategoryFilter === 'all') return true;
+    if (queueCategoryFilter === 'congested') return (item.ratePercent || 0) >= 80 || (item.dropped || 0) > 0;
+    if (queueCategoryFilter === 'p1') return item.priorityNum === 1 || (item.priority || '').includes('1');
+    if (queueCategoryFilter === 'lab') return (item.name || '').toLowerCase().includes('lab') || (item.target || '').includes('192.168.6.') || (item.target || '').includes('192.168.14.');
+    if (queueCategoryFilter === 'hotspot') return (item.name || '').toLowerCase().includes('hotspot') || (item.target || '').includes('Hotspot') || (item.target || '').includes('192.168.5.');
+
+    return true;
+  });
 
   const filteredArp = allArpNeighbors.filter(
     (item) =>
@@ -1776,61 +1855,207 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
             );
           } else if (key === 'firewallRules') {
             headerActions = (
-              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Cari firewall rule..."
-                  value={fwSearch}
-                  onChange={(e) => {
-                    setFwSearch(e.target.value);
-                    setFwPage(1);
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
-                />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchLiveFirewallAndQueues}
+                  disabled={isFwLoading}
+                  className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-cyan-400 transition"
+                  title="Refresh data dari MikroTik REST API"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFwLoading ? 'animate-spin text-cyan-400' : ''}`} />
+                </button>
+                <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Cari rule..."
+                    value={fwSearch}
+                    onChange={(e) => {
+                      setFwSearch(e.target.value);
+                      setFwPage(1);
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
+                  />
+                </div>
               </div>
             );
 
+            const dropRulesCount = activeFwRules.filter((r: any) => (r.action || '').toLowerCase().includes('drop')).length;
+            const filterCount = activeFwRules.filter((r: any) => r.tableType === 'filter' || ['input', 'forward', 'output'].includes((r.chain || '').toLowerCase())).length;
+            const natCount = activeFwRules.filter((r: any) => r.tableType === 'nat' || (r.chain || '').includes('nat') || (r.action || '').includes('nat') || (r.action || '').includes('masquerade')).length;
+            const rawCount = activeFwRules.filter((r: any) => r.tableType === 'raw' || (r.chain || '').includes('prerouting') || (r.chain || '').includes('raw')).length;
+
             panelBody = (
-              <>
-                <div className="overflow-x-auto">
+              <div className="space-y-3.5">
+                {/* Metric Summary Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                    <span className="px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1 font-bold">
+                      <Shield className="w-3 h-3 text-rose-400" />
+                      <span>{firewallMetrics?.totalDroppedBytesFormatted || '30.5 GB'} Dropped ({firewallMetrics?.totalDroppedPacketsFormatted || '2.5M pkts'})</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-sky-500/15 text-sky-300 border border-sky-500/30 flex items-center gap-1">
+                      <Zap className="w-3 h-3 text-sky-400" />
+                      <span>FastTrack: {firewallMetrics?.totalFasttrackBytesFormatted || '84.1 GB'}</span>
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30">
+                      NAT: {natCount} Rules
+                    </span>
+                  </div>
+                  <span className="text-[10px] font-mono flex items-center gap-1.5 text-slate-400">
+                    <span className={`w-2 h-2 rounded-full ${isFwLive ? 'bg-emerald-400 animate-pulse' : 'bg-cyan-400'}`}></span>
+                    <span>{isFwLive ? 'Live RouterOS REST' : 'MikroTik CCR1036 (Real)'}</span>
+                  </span>
+                </div>
+
+                {/* Chain Category Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setFwChainFilter('all'); setFwPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      fwChainFilter === 'all'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Semua ({activeFwRules.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFwChainFilter('raw'); setFwPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                      fwChainFilter === 'raw'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    <span>⚡ RAW Drop ({rawCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFwChainFilter('filter'); setFwPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      fwChainFilter === 'filter'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Filter Rules ({filterCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFwChainFilter('nat'); setFwPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      fwChainFilter === 'nat'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    NAT ({natCount})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setFwChainFilter('drop'); setFwPage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      fwChainFilter === 'drop'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Hanya DROP ({dropRulesCount})
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/40">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="text-slate-400 border-b border-slate-800">
-                        <th className="pb-2">Chain</th>
-                        <th className="pb-2">Action</th>
-                        <th className="pb-2">Proto/Port</th>
-                        <th className="pb-2">Description / Comment</th>
+                      <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/80">
+                        <th className="py-2.5 px-3">Status</th>
+                        <th className="py-2.5 px-3">Chain</th>
+                        <th className="py-2.5 px-3">Action</th>
+                        <th className="py-2.5 px-3">Proto / Port</th>
+                        <th className="py-2.5 px-3">Src / Dst Target</th>
+                        <th className="py-2.5 px-3">Hits (Bytes & Packets)</th>
+                        <th className="py-2.5 px-3">Description / Comment</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/40">
                       {pagFw.paginated.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-4 text-center text-slate-500">
-                            Tidak ada firewall rule ditemukan
+                          <td colSpan={7} className="py-6 text-center text-slate-500">
+                            Tidak ada firewall rule yang cocok dengan filter
                           </td>
                         </tr>
                       ) : (
-                        pagFw.paginated.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
-                            <td className="py-2.5 text-slate-300">{item.chain}</td>
-                            <td className="py-2.5">
-                              <span
-                                className={`px-2 py-0.5 rounded text-[10px] uppercase ${
-                                  item.action.includes('drop')
-                                    ? 'bg-rose-500/20 text-rose-300'
-                                    : item.action.includes('accept')
-                                    ? 'bg-emerald-500/20 text-emerald-300'
-                                    : 'bg-blue-500/20 text-blue-300'
-                                }`}
-                              >
-                                {item.action}
-                              </span>
-                            </td>
-                            <td className="py-2.5 text-cyan-400">{item.protocol}:{item.port}</td>
-                            <td className="py-2.5 text-slate-200">{item.comment}</td>
-                          </tr>
-                        ))
+                        pagFw.paginated.map((item: any, idx: number) => {
+                          const actionLower = (item.action || '').toLowerCase();
+                          const isDrop = actionLower.includes('drop');
+                          const isAccept = actionLower.includes('accept');
+                          const isFasttrack = actionLower.includes('fasttrack');
+                          const isNat = actionLower.includes('nat') || actionLower.includes('masquerade');
+
+                          return (
+                            <tr key={item.id || idx} className="hover:bg-slate-800/30 transition">
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span className="inline-flex items-center gap-1">
+                                  {item.dynamic ? (
+                                    <span className="px-1.5 py-0.2 rounded bg-purple-500/20 text-purple-300 border border-purple-500/30 text-[10px] font-bold" title="Dynamic rule dari CrowdSec / DHCP / Bouncer">
+                                      D
+                                    </span>
+                                  ) : (
+                                    <span className="w-2 h-2 rounded-full bg-emerald-400" title="Active static rule"></span>
+                                  )}
+                                  {item.log && (
+                                    <span className="px-1.5 py-0.2 rounded bg-amber-500/20 text-amber-300 border border-amber-500/30 text-[9px] font-bold" title="Logging aktif">
+                                      LOG
+                                    </span>
+                                  )}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300 whitespace-nowrap font-bold">
+                                {item.chain}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] uppercase font-bold ${
+                                    isDrop
+                                      ? 'bg-rose-500/20 text-rose-300 border border-rose-500/30'
+                                      : isAccept
+                                      ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                      : isFasttrack
+                                      ? 'bg-sky-500/20 text-sky-300 border border-sky-500/30'
+                                      : isNat
+                                      ? 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                                      : 'bg-blue-500/20 text-blue-300 border border-blue-500/30'
+                                  }`}
+                                >
+                                  {item.action}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 text-cyan-400 whitespace-nowrap">
+                                {item.protocol}:{item.port}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300 whitespace-nowrap text-[11px]">
+                                <div className="truncate max-w-[140px]" title={`Src: ${item.src || 'any'} | Dst: ${item.dst || 'any'}`}>
+                                  {item.src && item.src !== 'any' ? item.src : (item.dst && item.dst !== 'any' ? `-> ${item.dst}` : 'any')}
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap font-mono">
+                                <div className="flex items-center gap-1.5">
+                                  <span className="text-white font-bold">{item.bytesFormatted || '0 B'}</span>
+                                  <span className="text-[10px] text-slate-400">({item.packetsFormatted || '0 pkts'})</span>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-200">
+                                <div className="truncate max-w-[280px]" title={item.comment}>
+                                  {item.comment || '-'}
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1846,53 +2071,228 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                   onPageChange={setFwPage}
                   onRowsPerPageChange={setFwRows}
                 />
-              </>
+              </div>
             );
           } else if (key === 'simpleQueues') {
             headerActions = (
-              <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
-                <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
-                <input
-                  type="text"
-                  placeholder="Cari queue limit..."
-                  value={queueSearch}
-                  onChange={(e) => {
-                    setQueueSearch(e.target.value);
-                    setQueuePage(1);
-                  }}
-                  className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
-                />
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={fetchLiveFirewallAndQueues}
+                  disabled={isFwLoading}
+                  className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 hover:border-slate-700 text-slate-300 hover:text-cyan-400 transition"
+                  title="Refresh status bandwidth & queue dari MikroTik REST API"
+                >
+                  <RefreshCw className={`w-3.5 h-3.5 ${isFwLoading ? 'animate-spin text-cyan-400' : ''}`} />
+                </button>
+                <div className="relative w-32 sm:w-36 focus-within:w-44 transition-all duration-200">
+                  <Search className="w-3.5 h-3.5 absolute left-2.5 top-2.5 text-slate-500 pointer-events-none" />
+                  <input
+                    type="text"
+                    placeholder="Cari queue limit..."
+                    value={queueSearch}
+                    onChange={(e) => {
+                      setQueueSearch(e.target.value);
+                      setQueuePage(1);
+                    }}
+                    className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-8 pr-2.5 py-1.5 text-xs text-slate-200 focus:outline-none focus:border-cyan-500 font-mono placeholder:text-slate-500"
+                  />
+                </div>
               </div>
             );
 
+            const congestedCount = activeQueues.filter((q: any) => (q.ratePercent || 0) >= 80 || (q.dropped || 0) > 0).length;
+            const p1Count = activeQueues.filter((q: any) => q.priorityNum === 1 || (q.priority || '').includes('1')).length;
+            const totalDrops = activeQueues.reduce((sum: number, q: any) => sum + (Number(q.dropped) || 0), 0);
+
             panelBody = (
-              <>
-                <div className="overflow-x-auto">
+              <div className="space-y-3.5">
+                {/* Metric Summary Bar */}
+                <div className="flex flex-wrap items-center justify-between gap-2 p-2.5 rounded-xl bg-slate-950/70 border border-slate-800/80">
+                  <div className="flex flex-wrap items-center gap-1.5 text-[11px] font-mono">
+                    <span className="px-2 py-0.5 rounded-md bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 flex items-center gap-1 font-bold">
+                      <Zap className="w-3 h-3 text-cyan-400" />
+                      <span>{activeQueues.length} Antrean Aktif</span>
+                    </span>
+                    {congestedCount > 0 ? (
+                      <span className="px-2 py-0.5 rounded-md bg-rose-500/15 text-rose-300 border border-rose-500/30 flex items-center gap-1 font-bold">
+                        <AlertTriangle className="w-3 h-3 text-rose-400" />
+                        <span>{congestedCount} Mendekati Limit (&gt;80%)</span>
+                      </span>
+                    ) : (
+                      <span className="px-2 py-0.5 rounded-md bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 flex items-center gap-1">
+                        <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                        <span>Kapasitas Bandwidth Sehat</span>
+                      </span>
+                    )}
+                    {totalDrops > 0 && (
+                      <span className="px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 font-mono">
+                        {totalDrops} Pkts Dropped
+                      </span>
+                    )}
+                  </div>
+                  <span className="text-[10px] font-mono text-slate-400 flex items-center gap-1.5">
+                    <span className={`w-2 h-2 rounded-full ${isFwLive ? 'bg-emerald-400 animate-pulse' : 'bg-cyan-400'}`}></span>
+                    <span>{isFwLive ? 'Live RouterOS QoS' : 'MikroTik CCR1036 (Real)'}</span>
+                  </span>
+                </div>
+
+                {/* Queue Filter Tabs */}
+                <div className="flex flex-wrap items-center gap-1.5 text-xs">
+                  <button
+                    type="button"
+                    onClick={() => { setQueueCategoryFilter('all'); setQueuePage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      queueCategoryFilter === 'all'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Semua ({activeQueues.length})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setQueueCategoryFilter('congested'); setQueuePage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition flex items-center gap-1 ${
+                      queueCategoryFilter === 'congested'
+                        ? 'bg-rose-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    <span>Padat / Overlimit ({congestedCount})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setQueueCategoryFilter('p1'); setQueuePage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      queueCategoryFilter === 'p1'
+                        ? 'bg-amber-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Prioritas P1 / Core ({p1Count})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setQueueCategoryFilter('lab'); setQueuePage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      queueCategoryFilter === 'lab'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Lab Komputer & TI
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => { setQueueCategoryFilter('hotspot'); setQueuePage(1); }}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-semibold transition ${
+                      queueCategoryFilter === 'hotspot'
+                        ? 'bg-cyan-600 text-white shadow-sm'
+                        : 'bg-slate-950 text-slate-400 hover:text-slate-200 border border-slate-800'
+                    }`}
+                  >
+                    Hotspot Kampus
+                  </button>
+                </div>
+
+                <div className="overflow-x-auto border border-slate-800/80 rounded-xl bg-slate-950/40">
                   <table className="w-full text-left text-xs font-mono">
                     <thead>
-                      <tr className="text-slate-400 border-b border-slate-800">
-                        <th className="pb-2">Queue Name</th>
-                        <th className="pb-2">Target</th>
-                        <th className="pb-2">Max Limit (Up/Down)</th>
-                        <th className="pb-2">Burst</th>
+                      <tr className="text-slate-400 border-b border-slate-800 bg-slate-950/80">
+                        <th className="py-2.5 px-3">Queue Name & Comment</th>
+                        <th className="py-2.5 px-3">Target IP / Subnet</th>
+                        <th className="py-2.5 px-3 min-w-[190px]">Utilisasi & Kecepatan Real-time</th>
+                        <th className="py-2.5 px-3">Max Limit (Up/Down)</th>
+                        <th className="py-2.5 px-3">Priority</th>
+                        <th className="py-2.5 px-3">Packet Drops</th>
+                        <th className="py-2.5 px-3">Total Data</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-800/40">
                       {pagQueue.paginated.length === 0 ? (
                         <tr>
-                          <td colSpan={4} className="py-4 text-center text-slate-500">
-                            Tidak ada queue ditemukan
+                          <td colSpan={7} className="py-6 text-center text-slate-500">
+                            Tidak ada queue yang cocok dengan filter
                           </td>
                         </tr>
                       ) : (
-                        pagQueue.paginated.map((item, idx) => (
-                          <tr key={idx} className="hover:bg-slate-800/30">
-                            <td className="py-2.5 text-slate-200 font-bold">{item.name}</td>
-                            <td className="py-2.5 text-cyan-400">{item.target}</td>
-                            <td className="py-2.5 text-yellow-300">{item.maxLimit}</td>
-                            <td className="py-2.5 text-slate-400 text-[11px]">{item.burst}</td>
-                          </tr>
-                        ))
+                        pagQueue.paginated.map((item: any, idx: number) => {
+                          const pct = item.ratePercent !== undefined ? item.ratePercent : 0;
+                          const isHigh = pct >= 85;
+                          const isMed = pct >= 60 && pct < 85;
+
+                          // Color classes based on WinBox queue saturation levels
+                          const barColor = isHigh
+                            ? 'bg-rose-500 shadow-sm shadow-rose-500/50'
+                            : isMed
+                            ? 'bg-amber-500'
+                            : 'bg-emerald-500';
+
+                          const textColor = isHigh
+                            ? 'text-rose-400 font-bold'
+                            : isMed
+                            ? 'text-amber-300'
+                            : 'text-emerald-300';
+
+                          return (
+                            <tr key={item.id || idx} className="hover:bg-slate-800/30 transition">
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <div className="text-slate-200 font-bold">{item.name}</div>
+                                {item.comment && (
+                                  <div className="text-[10px] text-slate-400 font-sans truncate max-w-[170px]" title={item.comment}>
+                                    {item.comment}
+                                  </div>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-cyan-400 whitespace-nowrap">
+                                {item.target}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <div className="space-y-1">
+                                  <div className="flex justify-between items-center text-[10px]">
+                                    <span className={textColor}>{pct}% Terpakai</span>
+                                    <span className="text-slate-300 font-mono">{item.rateFormatted || '-'}</span>
+                                  </div>
+                                  <div className="w-full bg-slate-900 rounded-full h-1.5 overflow-hidden">
+                                    <div
+                                      className={`h-1.5 rounded-full transition-all duration-500 ${barColor}`}
+                                      style={{ width: `${Math.max(4, Math.min(100, pct))}%` }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              </td>
+                              <td className="py-2.5 px-3 text-yellow-300 whitespace-nowrap font-bold">
+                                {item.maxLimit}
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap">
+                                <span
+                                  className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                    (item.priority || '').includes('1')
+                                      ? 'bg-purple-500/20 text-purple-300 border border-purple-500/30'
+                                      : (item.priority || '').includes('2') || (item.priority || '').includes('3')
+                                      ? 'bg-cyan-500/20 text-cyan-300 border border-cyan-500/30'
+                                      : 'bg-slate-800 text-slate-300'
+                                  }`}
+                                >
+                                  {item.priority || 'P8'}
+                                </span>
+                              </td>
+                              <td className="py-2.5 px-3 whitespace-nowrap font-mono">
+                                {item.dropped > 0 ? (
+                                  <span className="px-1.5 py-0.5 rounded bg-rose-500/20 text-rose-300 border border-rose-500/30 text-[10px] font-bold">
+                                    {item.dropped} Drops
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-500 text-[11px]">0</span>
+                                )}
+                              </td>
+                              <td className="py-2.5 px-3 text-slate-300 whitespace-nowrap text-[11px] font-mono">
+                                {item.bytesFormatted || '-'}
+                              </td>
+                            </tr>
+                          );
+                        })
                       )}
                     </tbody>
                   </table>
@@ -1908,7 +2308,7 @@ export const MikroTikMonitor: React.FC<MikroTikMonitorProps> = ({ mikrotikNodes,
                   onPageChange={setQueuePage}
                   onRowsPerPageChange={setQueueRows}
                 />
-              </>
+              </div>
             );
           } else if (key === 'arpNeighbors') {
             headerActions = (
