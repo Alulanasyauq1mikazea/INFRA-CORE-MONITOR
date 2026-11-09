@@ -7890,6 +7890,44 @@ function getIpGeoLocation(ip: string) {
     return { country: 'ID', countryName: 'Indonesia', flag: '🇮🇩' };
   }
 
+  // Taiwan (HiNet, Chunghwa Telecom, TANet, Taiwan Mobile, FarEasTone, Google Cloud TW)
+  if (
+    (p0 === 35 && p1 >= 228 && p1 <= 230) ||
+    (p0 === 34 && (p1 === 80 || p1 === 81 || p1 === 92)) ||
+    (p0 === 104 && p1 === 199 && p2 >= 128) ||
+    (p0 === 140 && p1 >= 109 && p1 <= 138) ||
+    (p0 === 163 && p1 >= 13 && p1 <= 28) ||
+    (p0 === 192 && p1 === 83 && p2 >= 166 && p2 <= 197) ||
+    (p0 === 192 && p1 === 192) ||
+    (p0 === 59 && p1 >= 120 && p1 <= 127) ||
+    (p0 === 60 && p1 >= 248 && p1 <= 251) ||
+    (p0 === 61 && p1 >= 216 && p1 <= 231) ||
+    (p0 === 111 && p1 >= 240 && p1 <= 255) ||
+    (p0 === 114 && p1 >= 32 && p1 <= 47) ||
+    (p0 === 118 && p1 >= 160 && p1 <= 175) ||
+    (p0 === 122 && p1 >= 116 && p1 <= 119) ||
+    (p0 === 125 && p1 >= 224 && p1 <= 235) ||
+    (p0 === 218 && p1 >= 160 && p1 <= 175) ||
+    (p0 === 220 && p1 >= 128 && p1 <= 143) ||
+    (p0 === 123 && p1 >= 192 && p1 <= 195) ||
+    (p0 === 124 && (p1 === 218 || p1 === 219)) ||
+    (p0 === 219 && p1 >= 84 && p1 <= 87) ||
+    (p0 === 210 && ((p1 >= 200 && p1 <= 203) || p1 === 241 || p1 === 242)) ||
+    (p0 === 211 && p1 >= 72 && p1 <= 79) ||
+    (p0 === 219 && p1 >= 80 && p1 <= 83) ||
+    (p0 === 43 && p1 === 249) ||
+    (p0 === 45 && (p1 === 121 || p1 === 138)) ||
+    (p0 === 103 && (p1 === 3 || p1 === 5 || p1 === 23 || p1 === 38 || p1 === 125 || p1 === 143 || p1 === 152 || p1 === 214))
+  ) {
+    if (p0 === 35 || p0 === 34 || (p0 === 104 && p1 === 199)) {
+      return { country: 'TW', countryName: 'Taiwan (Changhua)', flag: '🇹🇼', city: 'Changhua', isp: 'Google Cloud (asia-east1)' };
+    }
+    if (p0 === 140 || p0 === 163 || (p0 === 192 && p1 === 83)) {
+      return { country: 'TW', countryName: 'Taiwan (Taipei)', flag: '🇹🇼', city: 'Taipei', isp: 'Taiwan Academic Network (TANet)' };
+    }
+    return { country: 'TW', countryName: 'Taiwan', flag: '🇹🇼', city: 'Taipei', isp: 'Chunghwa Telecom / Taiwan Internet' };
+  }
+
   // China
   if (
     p0 === 42 || p0 === 43 || p0 === 58 || p0 === 59 || p0 === 60 || p0 === 61 ||
@@ -7983,6 +8021,7 @@ const CANONICAL_GEO_MAP: Record<string, { countryName: string; flag: string }> =
   MY: { countryName: 'Malaysia', flag: '🇲🇾' },
   TH: { countryName: 'Thailand', flag: '🇹🇭' },
   TW: { countryName: 'Taiwan', flag: '🇹🇼' },
+  TAIWAN: { countryName: 'Taiwan', flag: '🇹🇼' },
   HK: { countryName: 'Hong Kong', flag: '🇭🇰' },
   BE: { countryName: 'Belgium', flag: '🇧🇪' },
   CH: { countryName: 'Switzerland', flag: '🇨🇭' },
@@ -7992,7 +8031,10 @@ const CANONICAL_GEO_MAP: Record<string, { countryName: string; flag: string }> =
 
 function resolveCountryDetails(countryCode?: string, geoFallback?: any) {
   let code = countryCode ? countryCode.toUpperCase() : '';
-  // If countryCode is generic US (e.g. from ARIN CIDR registration) but geoFallback has specific regional country (e.g. AU, DE, BE, NL, SG, JP)
+  if (code === 'TAIWAN' || code.includes('TAIWAN')) {
+    code = 'TW';
+  }
+  // If countryCode is generic US (e.g. from ARIN CIDR registration) but geoFallback has specific regional country (e.g. AU, DE, BE, NL, SG, JP, TW)
   if (code === 'US' && geoFallback?.country && geoFallback.country !== 'US') {
     code = geoFallback.country.toUpperCase();
   } else if (!code || code === 'XX' || code === 'GLOBAL') {
@@ -8022,6 +8064,8 @@ app.get('/api/geoip/lookup', (req, res) => {
     ip,
     ...result,
     talosSource: 'Cisco Talos Intelligence / Cloud POP Resolution Engine',
+    talosUrl: `https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(ip)}`,
+    abuseIpDbUrl: `https://www.abuseipdb.com/check/${encodeURIComponent(ip)}`,
     timestamp: new Date().toISOString(),
   });
 });

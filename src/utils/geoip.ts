@@ -65,6 +65,12 @@ export const GLOBAL_CITY_COORDINATES: Record<string, { lat: number; lon: number;
   'Hong Kong': { lat: 22.3193, lon: 114.1694, city: 'Hong Kong', countryCode: 'HK', countryName: 'Hong Kong', flag: '🇭🇰' },
   'Taipei': { lat: 25.0330, lon: 121.5654, city: 'Taipei', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
   'Changhua': { lat: 24.0815, lon: 120.5385, city: 'Changhua', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'Kaohsiung': { lat: 22.6273, lon: 120.3014, city: 'Kaohsiung', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'Taichung': { lat: 24.1477, lon: 120.6736, city: 'Taichung', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'Tainan': { lat: 22.9997, lon: 120.2270, city: 'Tainan', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'Hsinchu': { lat: 24.8138, lon: 120.9675, city: 'Hsinchu', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'Taoyuan': { lat: 24.9936, lon: 121.3010, city: 'Taoyuan', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
+  'New Taipei': { lat: 25.0169, lon: 121.4627, city: 'New Taipei', countryCode: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
   'Hanoi': { lat: 21.0285, lon: 105.8542, city: 'Hanoi', countryCode: 'VN', countryName: 'Vietnam', flag: '🇻🇳' },
   'Ho Chi Minh City': { lat: 10.8231, lon: 106.6297, city: 'Ho Chi Minh City', countryCode: 'VN', countryName: 'Vietnam', flag: '🇻🇳' },
   'Seoul': { lat: 37.5665, lon: 126.9780, city: 'Seoul', countryCode: 'KR', countryName: 'South Korea', flag: '🇰🇷' },
@@ -141,32 +147,47 @@ export function resolveCityCoordinates(
   countryCode?: string,
   ip?: string
 ): { lat: number; lon: number; city: string; countryCode: string; countryName: string; flag: string } {
-  // 1. Exact match in GLOBAL_CITY_COORDINATES: A city is strictly bound to its sovereign country
-  if (city && GLOBAL_CITY_COORDINATES[city]) {
-    const c = GLOBAL_CITY_COORDINATES[city];
-    return {
-      lat: c.lat,
-      lon: c.lon,
-      city: c.city,
-      countryCode: c.countryCode,
-      countryName: c.countryName,
-      flag: c.flag,
-    };
+  // Normalize countryCode to 2-letter canonical ISO code
+  let targetCountry: string | undefined = undefined;
+  if (countryCode && countryCode !== 'XX' && countryCode !== 'GLOBAL') {
+    const raw = countryCode.trim().toUpperCase();
+    if (raw === 'TW' || raw === 'TAIWAN' || raw.includes('TAIWAN') || raw === 'REPUBLIC OF CHINA') {
+      targetCountry = 'TW';
+    } else if (raw.length === 2) {
+      targetCountry = raw;
+    }
   }
 
-  // 2. Partial city name match
+  // 1. Exact match in GLOBAL_CITY_COORDINATES: Accept only if no targetCountry or matching targetCountry
+  if (city && GLOBAL_CITY_COORDINATES[city]) {
+    const c = GLOBAL_CITY_COORDINATES[city];
+    if (!targetCountry || c.countryCode.toUpperCase() === targetCountry) {
+      return {
+        lat: c.lat,
+        lon: c.lon,
+        city: c.city,
+        countryCode: c.countryCode,
+        countryName: c.countryName,
+        flag: c.flag,
+      };
+    }
+  }
+
+  // 2. Partial city name match (ensuring country consistency)
   if (city) {
     const cleanLower = city.toLowerCase();
     for (const [key, val] of Object.entries(GLOBAL_CITY_COORDINATES)) {
       if (cleanLower.includes(key.toLowerCase()) || key.toLowerCase().includes(cleanLower)) {
-        return {
-          lat: val.lat,
-          lon: val.lon,
-          city: val.city,
-          countryCode: val.countryCode,
-          countryName: val.countryName,
-          flag: val.flag,
-        };
+        if (!targetCountry || val.countryCode.toUpperCase() === targetCountry) {
+          return {
+            lat: val.lat,
+            lon: val.lon,
+            city: val.city,
+            countryCode: val.countryCode,
+            countryName: val.countryName,
+            flag: val.flag,
+          };
+        }
       }
     }
   }
@@ -188,7 +209,7 @@ export function resolveCityCoordinates(
     ID: ['Jakarta', 'Surabaya', 'Bandung', 'Medan'],
     SG: ['Singapore'],
     HK: ['Hong Kong'],
-    TW: ['Taipei', 'Changhua'],
+    TW: ['Taipei', 'Changhua', 'Kaohsiung', 'Taichung', 'Hsinchu', 'Tainan'],
     VN: ['Hanoi', 'Ho Chi Minh City'],
     IN: ['Mumbai', 'Delhi', 'Bangalore'],
     KR: ['Seoul'],
@@ -211,7 +232,8 @@ export function resolveCityCoordinates(
     PH: ['Manila'],
   };
 
-  const code = (countryCode || 'US').toUpperCase();
+  const rawCode = (targetCountry || countryCode || 'US').toUpperCase();
+  const code = (rawCode === 'TAIWAN' || rawCode.includes('TAIWAN')) ? 'TW' : rawCode;
   const availableCities = countryCityMap[code];
   if (availableCities && availableCities.length > 0) {
     const selectedCity = availableCities[hash % availableCities.length];
@@ -226,6 +248,18 @@ export function resolveCityCoordinates(
         flag: c.flag,
       };
     }
+  }
+
+  // Sovereign Country-specific center fallbacks
+  if (code === 'TW') {
+    return {
+      lat: 23.6978,
+      lon: 120.9605,
+      city: city || 'Taipei',
+      countryCode: 'TW',
+      countryName: 'Taiwan',
+      flag: '🇹🇼',
+    };
   }
 
   const fallback = CANONICAL_COUNTRY_MAP[code] || { name: code, flag: '🌐' };
@@ -418,6 +452,50 @@ function rawLookupIpLocation(cleanIp: string): GeoLocation {
   // 4. Country Subnet Ranges
   // -------------------------------------------------------------
 
+  // Taiwan (Chunghwa Telecom, HiNet, TANet Universities, Taiwan Mobile, FarEasTone, Google Cloud TW)
+  if (
+    (p0 === 35 && p1 >= 228 && p1 <= 230) ||
+    (p0 === 34 && (p1 === 80 || p1 === 81 || p1 === 92)) ||
+    (p0 === 104 && p1 === 199 && p2 >= 128) ||
+    (p0 === 140 && p1 >= 109 && p1 <= 138) ||
+    (p0 === 163 && p1 >= 13 && p1 <= 28) ||
+    (p0 === 192 && p1 === 83 && p2 >= 166 && p2 <= 197) ||
+    (p0 === 192 && p1 === 192) ||
+    (p0 === 59 && p1 >= 120 && p1 <= 127) ||
+    (p0 === 60 && p1 >= 248 && p1 <= 251) ||
+    (p0 === 61 && p1 >= 216 && p1 <= 231) ||
+    (p0 === 111 && p1 >= 240 && p1 <= 255) ||
+    (p0 === 114 && p1 >= 32 && p1 <= 47) ||
+    (p0 === 118 && p1 >= 160 && p1 <= 175) ||
+    (p0 === 122 && p1 >= 116 && p1 <= 119) ||
+    (p0 === 125 && p1 >= 224 && p1 <= 235) ||
+    (p0 === 218 && p1 >= 160 && p1 <= 175) ||
+    (p0 === 220 && p1 >= 128 && p1 <= 143) ||
+    (p0 === 123 && p1 >= 192 && p1 <= 195) ||
+    (p0 === 124 && (p1 === 218 || p1 === 219)) ||
+    (p0 === 219 && p1 >= 84 && p1 <= 87) ||
+    (p0 === 210 && ((p1 >= 200 && p1 <= 203) || p1 === 241 || p1 === 242)) ||
+    (p0 === 211 && p1 >= 72 && p1 <= 79) ||
+    (p0 === 219 && p1 >= 80 && p1 <= 83) ||
+    (p0 === 43 && p1 === 249) ||
+    (p0 === 45 && (p1 === 121 || p1 === 138)) ||
+    (p0 === 103 && (p1 === 3 || p1 === 5 || p1 === 23 || p1 === 38 || p1 === 125 || p1 === 143 || p1 === 152 || p1 === 214))
+  ) {
+    if (p0 === 35 || p0 === 34 || (p0 === 104 && p1 === 199)) {
+      return { country: 'TW', countryName: 'Taiwan (Changhua)', flag: '🇹🇼', city: 'Changhua', isp: 'Google Cloud (asia-east1)', lat: 24.0815, lon: 120.5385 };
+    }
+    if (p0 === 140 || p0 === 163 || (p0 === 192 && p1 === 83)) {
+      return { country: 'TW', countryName: 'Taiwan (Taipei)', flag: '🇹🇼', city: 'Taipei', isp: 'Taiwan Academic Network (TANet)', lat: 25.0330, lon: 121.5654 };
+    }
+    if (p0 === 114 || p0 === 125) {
+      return { country: 'TW', countryName: 'Taiwan (Hsinchu)', flag: '🇹🇼', city: 'Hsinchu', isp: 'Chunghwa Telecom', lat: 24.8138, lon: 120.9675 };
+    }
+    if (p0 === 61 || p0 === 122) {
+      return { country: 'TW', countryName: 'Taiwan (Kaohsiung)', flag: '🇹🇼', city: 'Kaohsiung', isp: 'Chunghwa Telecom', lat: 22.6273, lon: 120.3014 };
+    }
+    return { country: 'TW', countryName: 'Taiwan', flag: '🇹🇼', city: 'Taipei', isp: 'Chunghwa Telecom / Taiwan Internet', lat: 25.0330, lon: 121.5654 };
+  }
+
   // Indonesia
   if (
     p0 === 36 || p0 === 39 || p0 === 103 || p0 === 110 || p0 === 114 || p0 === 116 || p0 === 118 ||
@@ -535,6 +613,7 @@ function rawLookupIpLocation(cleanIp: string): GeoLocation {
     { country: 'IN', countryName: 'India', flag: '🇮🇳' },
     { country: 'ID', countryName: 'Indonesia', flag: '🇮🇩' },
     { country: 'JP', countryName: 'Japan', flag: '🇯🇵' },
+    { country: 'TW', countryName: 'Taiwan', flag: '🇹🇼' },
   ];
 
   const hash = (p0 * 31 + p1 * 17 + (p2 || 1)) % countries.length;

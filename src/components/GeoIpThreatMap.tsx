@@ -25,7 +25,8 @@ import {
   Layers,
   ZoomIn,
   ZoomOut,
-  Maximize2
+  Maximize2,
+  ExternalLink
 } from 'lucide-react';
 import { lookupIpLocation, resolveCityCoordinates, GLOBAL_CITY_COORDINATES } from '../utils/geoip';
 import { CountryFlag, getCanonicalCountryInfo } from './CountryFlag';
@@ -84,6 +85,8 @@ const COUNTRY_COORDINATES: Record<string, { lat: number; lon: number; name: stri
   BE: { lat: 50.5039, lon: 4.4699, name: 'Belgium', continent: 'Europe' },
   HK: { lat: 22.3193, lon: 114.1694, name: 'Hong Kong', continent: 'Asia' },
   TW: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
+  TAIWAN: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
+  Taiwan: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
   TH: { lat: 15.8700, lon: 100.9925, name: 'Thailand', continent: 'Asia' },
   PH: { lat: 12.8797, lon: 121.7740, name: 'Philippines', continent: 'Asia' },
   IT: { lat: 41.8719, lon: 12.5674, name: 'Italy', continent: 'Europe' },
@@ -457,83 +460,83 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     return map;
   }, [rawLogEvents]);
 
-  // Counts for each time filter
-  const todayCount = useMemo(() => {
-    return blockedIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, 'today')).length;
-  }, [blockedIps]);
+  // Merge blockedIps (from MikroTik firewall) and rawLogEvents (from CrowdSec Live Raw Logs)
+  // Ensures 100% of IPs, flags, countries, and scenarios from Live Raw Logs appear in Geo IP Threat Map!
+  const allThreatIps = useMemo(() => {
+    const ipMap = new Map<string, BlockedIpItem>();
 
-  const recent24hCount = useMemo(() => {
-    return blockedIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, '24h')).length;
-  }, [blockedIps]);
+    // 1. Add all blockedIps from MikroTik Address-List
+    if (Array.isArray(blockedIps)) {
+      blockedIps.forEach((b) => {
+        if (b && b.ip) {
+          ipMap.set(b.ip, { ...b });
+        }
+      });
+    }
 
-  // Filter IP data: default strictly to chosen time filter from MikroTik Address-List
-  const filteredIps = useMemo(() => {
-    return blockedIps.filter((item) => {
-      // 1. Time filter
-      if (!isTimestampRecent(item.creationTime || item.timestamp, timeFilter)) {
-        return false;
-      }
+    // 2. Add or update with real live attacks from rawLogEvents (authoritative source of truth)
+    if (Array.isArray(rawLogEvents)) {
+      rawLogEvents.forEach((ev: any) => {
+        const ip = ev.sourceIp || ev.ip;
+        if (!ip) return;
 
-      // 2. Threat type filter
-      if (threatTypeFilter !== 'all') {
-        const r = (item.reason || '').toLowerCase();
-        if (threatTypeFilter === 'scan' && !r.includes('scan') && !r.includes('probing')) return false;
-        if (threatTypeFilter === 'cve' && !r.includes('cve') && !r.includes('jira')) return false;
-        if (threatTypeFilter === 'useragent' && !r.includes('user-agent')) return false;
-        if (threatTypeFilter === 'bruteforce' && !r.includes('bruteforce') && !r.includes('bf')) return false;
-      }
+        const existing = ipMap.get(ip);
+        if (existing) {
+          // Live Raw Logs is the 100% accurate source of truth for country, countryName, flag, reason, and ISP
+          ipMap.set(ip, {
+            ...existing,
+            country: ev.country || existing.country,
+            countryName: ev.countryName || existing.countryName,
+            flag: ev.flag || existing.flag,
+            city: ev.city || existing.city,
+            reason: ev.scenario || existing.reason,
+            isp: ev.asName || existing.isp,
+            count: Math.max(existing.count || 1, (ev.eventsCount || 1)),
+            creationTime: ev.fullDateTimeWIT || ev.timestamp || existing.creationTime,
+          });
+        } else {
+          // If the IP is in Live Raw Logs but not in blockedIps, add it directly so it is visualized on the map!
+          ipMap.set(ip, {
+            ip,
+            country: ev.country || 'XX',
+            countryName: ev.countryName || 'Unknown',
+            flag: ev.flag || '🌐',
+            city: ev.city,
+            reason: ev.scenario || 'crowdsecurity/http-probing',
+            action: ev.decision === 'ban' ? 'drop' : 'alert',
+            expiresIn: ev.banDuration || '4h 00m',
+            creationTime: ev.fullDateTimeWIT || ev.timestamp || new Date().toISOString(),
+            origin: 'via Live Raw Logs (CrowdSec)',
+            listName: 'crowdsec',
+            dynamic: true,
+            flagText: 'D',
+            count: ev.eventsCount || 1,
+            isp: ev.asName || 'Cloud / Hosting Network',
+          });
+        }
+      });
+    }
 
-      // 3. Search query filter
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase();
-        const g = resolveItemGeo(item);
-        const ipMatch = item.ip.toLowerCase().includes(q);
-        const reasonMatch = (item.reason || '').toLowerCase().includes(q);
-        const countryMatch = (g.countryName || g.countryCode).toLowerCase().includes(q);
-        const cityMatch = g.cityName.toLowerCase().includes(q);
-        if (!ipMatch && !reasonMatch && !countryMatch && !cityMatch) return false;
-      }
-
-      return true;
-    });
-  }, [blockedIps, timeFilter, threatTypeFilter, searchQuery, liveRawIpMap]);
+    return Array.from(ipMap.values());
+  }, [blockedIps, rawLogEvents]);
 
   // Helper to resolve canonical country & city coordinates for an IP item
-  // Ensures City, Country Code, Country Name, and Flag Emoji are 100% synchronized
+  // Ensures City, Country Code, Country Name, and Flag Emoji are 100% synchronized with Live Raw Logs
   const resolveItemGeo = (item: BlockedIpItem) => {
     const liveMatch = liveRawIpMap.get(item.ip);
     const geo = lookupIpLocation(item.ip);
 
-    // Prioritize Live Raw Logs (confirmed accurate and true source of truth)
-    let countryHint = liveMatch?.country;
-    let cityHint = liveMatch?.city;
-    let flagHint = liveMatch?.flag;
-    let nameHint = liveMatch?.countryName;
+    // 1. Strict Priority: Live Raw Logs (confirmed exact match with Live Raw Logs panel)
+    const rawCountry = liveMatch?.country || (item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country);
+    const rawCountryName = liveMatch?.countryName || (item.countryName && item.countryName !== 'RouterOS Address-List' ? item.countryName : geo.countryName);
+    const rawFlag = liveMatch?.flag || item.flag || geo.flag;
+    const cityHint = liveMatch?.city || item.city || geo.city;
 
-    // If no live match or generic, use geo and item
-    if (!countryHint || countryHint === 'XX' || countryHint === 'GLOBAL') {
-      // Check if item has specific country (avoiding stale US ARIN override when geo has specific regional country)
-      if (item.country && item.country !== 'GLOBAL' && item.country !== 'XX' && !(item.country === 'US' && geo.country && geo.country !== 'US')) {
-        countryHint = item.country;
-        nameHint = item.countryName;
-        flagHint = item.flag;
-      } else {
-        countryHint = geo.country;
-        nameHint = geo.countryName;
-        flagHint = geo.flag;
-      }
-    }
+    // Resolve canonical ISO country info first (ensures 'TW', 'Taiwan', '🇹🇼' without ambiguity)
+    const canonical = getCanonicalCountryInfo(rawCountry, rawFlag, rawCountryName);
 
-    if (!cityHint) {
-      cityHint = item.city || geo.city;
-    }
-
-    // Now resolve coordinates and enforce mutual synchrony:
-    // A city's country and flag ALWAYS strictly align with that city
-    const resolved = resolveCityCoordinates(cityHint, countryHint, item.ip);
-
-    // Obtain canonical standardized metadata
-    const canonical = getCanonicalCountryInfo(resolved.countryCode, resolved.flag, resolved.countryName);
+    // Resolve coordinates and city strictly adhering to canonical countryCode
+    const resolved = resolveCityCoordinates(cityHint, canonical.code, item.ip);
 
     return {
       countryCode: canonical.code,
@@ -545,6 +548,56 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       isp: liveMatch?.asName || item.isp || geo.isp || 'Cloud / Hosting Network',
     };
   };
+
+  // Counts for each time filter
+  const todayCount = useMemo(() => {
+    return allThreatIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, 'today')).length;
+  }, [allThreatIps]);
+
+  const recent24hCount = useMemo(() => {
+    return allThreatIps.filter((i) => isTimestampRecent(i.creationTime || i.timestamp, '24h')).length;
+  }, [allThreatIps]);
+
+  // Filter IP data: search takes precedence so searched queries are never hidden by timeFilter
+  const filteredIps = useMemo(() => {
+    const hasSearch = Boolean(searchQuery.trim());
+    const q = searchQuery.toLowerCase().trim();
+
+    return allThreatIps.filter((item) => {
+      const g = resolveItemGeo(item);
+
+      // 1. Search query filter
+      if (hasSearch) {
+        const ipMatch = item.ip.toLowerCase().includes(q);
+        const reasonMatch = (item.reason || '').toLowerCase().includes(q);
+        const countryNameMatch = (g.countryName || '').toLowerCase().includes(q);
+        const countryCodeMatch = (g.countryCode || '').toLowerCase().includes(q);
+        const cityMatch = (g.cityName || '').toLowerCase().includes(q);
+        const ispMatch = (g.isp || item.isp || '').toLowerCase().includes(q);
+        const originMatch = (item.origin || '').toLowerCase().includes(q);
+
+        const matchesQuery = ipMatch || reasonMatch || countryNameMatch || countryCodeMatch || cityMatch || ispMatch || originMatch;
+        if (!matchesQuery) return false;
+        return true;
+      }
+
+      // 2. Time filter (applied when search box is empty)
+      if (!isTimestampRecent(item.creationTime || item.timestamp, timeFilter)) {
+        return false;
+      }
+
+      // 3. Threat type filter
+      if (threatTypeFilter !== 'all') {
+        const r = (item.reason || '').toLowerCase();
+        if (threatTypeFilter === 'scan' && !r.includes('scan') && !r.includes('probing')) return false;
+        if (threatTypeFilter === 'cve' && !r.includes('cve') && !r.includes('jira')) return false;
+        if (threatTypeFilter === 'useragent' && !r.includes('user-agent')) return false;
+        if (threatTypeFilter === 'bruteforce' && !r.includes('bruteforce') && !r.includes('bf')) return false;
+      }
+
+      return true;
+    });
+  }, [allThreatIps, timeFilter, threatTypeFilter, searchQuery, liveRawIpMap]);
 
   // High-Precision City Aggregates
   const cityThreatAggregates = useMemo(() => {
@@ -865,21 +918,21 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                     ? 'bg-purple-600 text-white shadow'
                     : 'text-slate-400 hover:text-slate-200'
                 }`}
-                title="Tampilkan semua data IP dalam MikroTik Address-List"
+                title="Tampilkan semua data IP dalam MikroTik Address-List & Log"
               >
-                <span>Semua ({blockedIps.length})</span>
+                <span>Semua ({allThreatIps.length})</span>
               </button>
             </div>
           </div>
         </div>
 
-        {/* Informative Alert Banner when Today is 0 but Address-List has items */}
-        {timeFilter === 'today' && filteredIps.length === 0 && blockedIps.length > 0 && (
+        {/* Informative Alert Banner when Today is 0 but Threat list has items */}
+        {timeFilter === 'today' && filteredIps.length === 0 && allThreatIps.length > 0 && !searchQuery.trim() && (
           <div className="p-3 bg-amber-950/30 border border-amber-500/40 rounded-xl flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-amber-200">
             <div className="flex items-center gap-2">
               <Clock className="w-4 h-4 text-amber-400 shrink-0" />
               <span>
-                Tidak ada entri serangan baru pada tanggal hari ini. Tersedia <strong>{blockedIps.length} entri IP</strong> tersimpan dalam MikroTik Address-List.
+                Tidak ada entri serangan baru pada tanggal hari ini. Tersedia <strong>{allThreatIps.length} entri IP</strong> tersimpan dalam MikroTik Address-List &amp; Log.
               </span>
             </div>
             <div className="flex items-center gap-2 shrink-0">
@@ -893,7 +946,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                 onClick={() => setTimeFilter('all')}
                 className="px-2.5 py-1 bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 rounded-lg font-bold transition"
               >
-                Tampilkan Semua Data ({blockedIps.length} IP)
+                Tampilkan Semua Data ({allThreatIps.length} IP)
               </button>
             </div>
           </div>
@@ -978,21 +1031,28 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
         <div className="flex flex-col md:flex-row items-center gap-3 pt-2">
           {/* Search Box */}
           <div className="relative flex-1 w-full">
-            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2" />
+            <Search className="w-4 h-4 text-slate-500 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
             <input
               type="text"
               placeholder="Cari IP, kota (Sydney, Frankfurt, Ashburn), negara (AU, DE, US), atau skenario..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-4 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
+              className="w-full bg-slate-950 border border-slate-800 rounded-xl pl-10 pr-28 py-2 text-xs text-slate-200 placeholder-slate-500 focus:outline-none focus:border-purple-500 transition"
             />
             {searchQuery && (
-              <button
-                onClick={() => setSearchQuery('')}
-                className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 text-xs"
-              >
-                Clear
-              </button>
+              <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                <span className="text-[10px] font-mono font-bold px-1.5 py-0.5 rounded bg-purple-950/80 text-purple-300 border border-purple-800/60">
+                  {filteredIps.length} hasil
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setSearchQuery('')}
+                  className="text-slate-400 hover:text-white text-xs px-1.5 py-0.5 rounded hover:bg-slate-800 transition"
+                  title="Bersihkan pencarian"
+                >
+                  ✕
+                </button>
+              </div>
             )}
           </div>
 
@@ -1231,6 +1291,16 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                               <div key={ipItem.ip} className="flex items-center justify-between bg-slate-100 px-1.5 py-0.5 rounded">
                                 <span className="font-bold text-slate-800">{ipItem.ip}</span>
                                 <div className="flex items-center gap-1">
+                                  <a
+                                    href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(ipItem.ip)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-1.5 py-0.5 rounded bg-blue-100 hover:bg-blue-200 text-blue-700 font-bold text-[9px] flex items-center gap-0.5 transition"
+                                    title="Cek Reputasi di Cisco Talos Intelligence"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    <span>Talos ↗</span>
+                                  </a>
                                   <button
                                     onClick={() => handleCopy(ipItem.ip)}
                                     className="text-slate-400 hover:text-slate-700 p-0.5"
@@ -1256,6 +1326,19 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                               </div>
                             )}
                           </div>
+                          {node.ips[0] && (
+                            <div className="pt-1 text-center">
+                              <a
+                                href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(node.ips[0].ip)}`}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="w-full inline-flex items-center justify-center gap-1 px-2 py-1 rounded bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold text-[10px] border border-blue-200 transition"
+                              >
+                                <ExternalLink className="w-3 h-3" />
+                                <span>Verifikasi Reputasi IP Utama di Cisco Talos ↗</span>
+                              </a>
+                            </div>
+                          )}
                         </div>
                       </div>
                     </Popup>
@@ -1471,15 +1554,27 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                         </td>
 
                         <td className="py-2.5 px-3 text-right whitespace-nowrap">
-                          {onRemoveIp && (
-                            <button
-                              onClick={() => onRemoveIp(item.ip)}
-                              className="text-slate-500 hover:text-rose-400 text-xs px-2 py-1 rounded hover:bg-rose-950/30 transition font-mono"
-                              title="Hapus IP dari Address List"
+                          <div className="flex items-center justify-end gap-1.5">
+                            <a
+                              href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(item.ip)}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="px-2 py-0.5 rounded bg-blue-500/10 hover:bg-blue-500/20 text-blue-400 hover:text-blue-300 border border-blue-500/30 text-[10px] font-mono font-bold inline-flex items-center gap-1 transition"
+                              title="Verifikasi Reputasi IP di Cisco Talos Intelligence"
                             >
-                              Unban
-                            </button>
-                          )}
+                              <ExternalLink className="w-2.5 h-2.5" />
+                              <span>Talos ↗</span>
+                            </a>
+                            {onRemoveIp && (
+                              <button
+                                onClick={() => onRemoveIp(item.ip)}
+                                className="text-slate-500 hover:text-rose-400 text-xs px-2 py-0.5 rounded hover:bg-rose-950/30 transition font-mono"
+                                title="Hapus IP dari Address List"
+                              >
+                                Unban
+                              </button>
+                            )}
+                          </div>
                         </td>
                       </tr>
                     );

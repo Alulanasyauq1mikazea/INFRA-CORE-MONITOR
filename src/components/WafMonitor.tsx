@@ -2956,7 +2956,17 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                 </span>
                               </td>
                               <td className="py-2.5 px-3 text-right">
-                                <div className="flex items-center justify-end gap-2">
+                                <div className="flex items-center justify-end gap-1.5">
+                                  <a
+                                    href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(item.ip)}`}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="px-2 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-blue-200 border border-blue-500/30 text-[10px] font-mono font-bold inline-flex items-center gap-1 transition shadow-sm"
+                                    title="Cek Reputasi IP di Cisco Talos Intelligence"
+                                  >
+                                    <ExternalLink className="w-2.5 h-2.5" />
+                                    <span>Talos ↗</span>
+                                  </a>
                                   <span className="px-2 py-0.5 rounded bg-rose-500/20 text-rose-400 border border-rose-500/30 text-[10px] font-bold">
                                     RAW DROP
                                   </span>
@@ -4234,11 +4244,24 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                 [{log.riskLevel}]
                               </span>
 
-                              {/* IP & Flag */}
-                              <span className="font-bold text-amber-300 flex items-center gap-1.5 bg-amber-950/30 px-2 py-0.5 rounded border border-amber-800/40 whitespace-nowrap">
-                                <CountryFlag countryCode={log.country} flagEmoji={log.flag} size="sm" />
-                                <span>{log.sourceIp}</span>
-                              </span>
+                              {/* IP & Flag + Talos Verification Link */}
+                              <div className="flex items-center gap-1.5 whitespace-nowrap">
+                                <span className="font-bold text-amber-300 flex items-center gap-1.5 bg-amber-950/30 px-2 py-0.5 rounded border border-amber-800/40">
+                                  <CountryFlag countryCode={log.country} flagEmoji={log.flag} size="sm" />
+                                  <span>{log.sourceIp}</span>
+                                </span>
+                                <a
+                                  href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(log.sourceIp)}`}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  onClick={(e) => e.stopPropagation()}
+                                  className="px-1.5 py-0.5 rounded bg-blue-500/15 hover:bg-blue-500/25 text-blue-300 hover:text-blue-200 border border-blue-500/30 text-[10px] font-mono font-bold inline-flex items-center gap-1 transition shadow-sm"
+                                  title={`Verifikasi ${log.sourceIp} di Cisco Talos Intelligence`}
+                                >
+                                  <ExternalLink className="w-2.5 h-2.5" />
+                                  <span>Talos ↗</span>
+                                </a>
+                              </div>
 
                               {/* HTTP Method */}
                               <span className={`px-1.5 py-0.5 rounded text-[10px] font-bold whitespace-nowrap ${
@@ -4352,6 +4375,18 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                                       <Download className="w-3 h-3" />
                                       <span>Unduh .JSON</span>
                                     </button>
+
+                                    <a
+                                      href={`https://www.talosintelligence.com/reputation_center/lookup?search=${encodeURIComponent(log.sourceIp)}`}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      onClick={(e) => e.stopPropagation()}
+                                      className="px-2.5 py-1 bg-blue-600/20 hover:bg-blue-600/30 text-blue-300 text-[10.5px] font-semibold rounded-lg flex items-center gap-1 border border-blue-500/40 transition"
+                                      title="Buka Reputasi IP Resmi di Cisco Talos Intelligence"
+                                    >
+                                      <ExternalLink className="w-3 h-3" />
+                                      <span>Verifikasi Talos ↗</span>
+                                    </a>
 
                                     <button
                                       type="button"
