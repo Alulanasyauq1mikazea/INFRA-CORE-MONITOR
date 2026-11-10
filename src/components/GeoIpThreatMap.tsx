@@ -28,8 +28,8 @@ import {
   Maximize2,
   ExternalLink
 } from 'lucide-react';
-import { lookupIpLocation, resolveCityCoordinates, GLOBAL_CITY_COORDINATES } from '../utils/geoip';
-import { CountryFlag, getCanonicalCountryInfo } from './CountryFlag';
+import { COUNTRY_COORDINATES, resolveUnifiedIpGeo, seedHydratedIpGeo, useHydratedGeoIp, cleanIpAddress } from '../utils/geoip';
+import { CountryFlag } from './CountryFlag';
 
 export interface BlockedIpItem {
   ip: string;
@@ -37,7 +37,14 @@ export interface BlockedIpItem {
   flag?: string;
   countryName?: string;
   city?: string;
+  region?: string;
   isp?: string;
+  asName?: string;
+  asn?: string;
+  cidr?: string;
+  rir?: string;
+  netName?: string;
+  source?: string;
   lat?: number;
   lon?: number;
   reason?: string;
@@ -60,56 +67,6 @@ interface GeoIpThreatMapProps {
   targetRouterName?: string;
   targetRouterIp?: string;
 }
-
-// Real-world Lat/Lon Coordinates for Countries
-const COUNTRY_COORDINATES: Record<string, { lat: number; lon: number; name: string; continent: string }> = {
-  US: { lat: 37.0902, lon: -95.7129, name: 'United States', continent: 'North America' },
-  DE: { lat: 51.1657, lon: 10.4515, name: 'Germany', continent: 'Europe' },
-  NL: { lat: 52.1326, lon: 5.2913, name: 'Netherlands', continent: 'Europe' },
-  FR: { lat: 46.2276, lon: 2.2137, name: 'France', continent: 'Europe' },
-  RU: { lat: 61.5240, lon: 105.3188, name: 'Russia', continent: 'Asia' },
-  CN: { lat: 35.8617, lon: 104.1954, name: 'China', continent: 'Asia' },
-  JP: { lat: 36.2048, lon: 138.2529, name: 'Japan', continent: 'Asia' },
-  KR: { lat: 35.9078, lon: 127.7669, name: 'South Korea', continent: 'Asia' },
-  SG: { lat: 1.3521, lon: 103.8198, name: 'Singapore', continent: 'Asia' },
-  MY: { lat: 4.2105, lon: 101.9758, name: 'Malaysia', continent: 'Asia' },
-  VN: { lat: 14.0583, lon: 108.2772, name: 'Vietnam', continent: 'Asia' },
-  IN: { lat: 20.5937, lon: 78.9629, name: 'India', continent: 'Asia' },
-  GB: { lat: 55.3781, lon: -3.4360, name: 'United Kingdom', continent: 'Europe' },
-  BR: { lat: -14.2350, lon: -51.9253, name: 'Brazil', continent: 'South America' },
-  ZA: { lat: -30.5595, lon: 22.9375, name: 'South Africa', continent: 'Africa' },
-  ID: { lat: -0.7893, lon: 113.9213, name: 'Indonesia', continent: 'Asia' },
-  AU: { lat: -25.2744, lon: 133.7751, name: 'Australia', continent: 'Oceania' },
-  CA: { lat: 56.1304, lon: -106.3468, name: 'Canada', continent: 'North America' },
-  LT: { lat: 55.1694, lon: 23.8813, name: 'Lithuania', continent: 'Europe' },
-  BE: { lat: 50.5039, lon: 4.4699, name: 'Belgium', continent: 'Europe' },
-  HK: { lat: 22.3193, lon: 114.1694, name: 'Hong Kong', continent: 'Asia' },
-  TW: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
-  TAIWAN: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
-  Taiwan: { lat: 23.6978, lon: 120.9605, name: 'Taiwan', continent: 'Asia' },
-  TH: { lat: 15.8700, lon: 100.9925, name: 'Thailand', continent: 'Asia' },
-  PH: { lat: 12.8797, lon: 121.7740, name: 'Philippines', continent: 'Asia' },
-  IT: { lat: 41.8719, lon: 12.5674, name: 'Italy', continent: 'Europe' },
-  ES: { lat: 40.4637, lon: -3.7492, name: 'Spain', continent: 'Europe' },
-  TR: { lat: 38.9637, lon: 35.2433, name: 'Turkey', continent: 'Europe/Asia' },
-  UA: { lat: 48.3794, lon: 31.1656, name: 'Ukraine', continent: 'Europe' },
-  PL: { lat: 51.9194, lon: 19.1451, name: 'Poland', continent: 'Europe' },
-  SE: { lat: 60.1282, lon: 18.6435, name: 'Sweden', continent: 'Europe' },
-  NO: { lat: 60.4720, lon: 8.4689, name: 'Norway', continent: 'Europe' },
-  FI: { lat: 61.9241, lon: 25.7482, name: 'Finland', continent: 'Europe' },
-  RO: { lat: 45.9432, lon: 24.9668, name: 'Romania', continent: 'Europe' },
-  BG: { lat: 42.7339, lon: 25.4858, name: 'Bulgaria', continent: 'Europe' },
-  CZ: { lat: 49.8175, lon: 15.4730, name: 'Czech Republic', continent: 'Europe' },
-  AT: { lat: 47.5162, lon: 14.5501, name: 'Austria', continent: 'Europe' },
-  CH: { lat: 46.8182, lon: 8.2275, name: 'Switzerland', continent: 'Europe' },
-  IR: { lat: 32.4279, lon: 53.6880, name: 'Iran', continent: 'Asia' },
-  PK: { lat: 30.3753, lon: 69.3451, name: 'Pakistan', continent: 'Asia' },
-  EG: { lat: 26.8206, lon: 30.8025, name: 'Egypt', continent: 'Africa' },
-  AR: { lat: -38.4161, lon: -63.6167, name: 'Argentina', continent: 'South America' },
-  CL: { lat: -35.6751, lon: -71.5430, name: 'Chile', continent: 'South America' },
-  MX: { lat: 23.6345, lon: -102.5528, name: 'Mexico', continent: 'North America' },
-  CO: { lat: 4.5709, lon: -74.2973, name: 'Colombia', continent: 'South America' },
-};
 
 // Target Router Location: Merauke, Papua Selatan, Indonesia
 const TARGET_LOCATION = {
@@ -443,7 +400,24 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
 
   // Map of IPs from live raw logs for 100% synchronized detection
   const liveRawIpMap = useMemo(() => {
-    const map = new Map<string, { country: string; countryName: string; flag: string; asName?: string; city?: string }>();
+    const map = new Map<
+      string,
+      {
+        country: string;
+        countryName: string;
+        flag: string;
+        asName?: string;
+        city?: string;
+        region?: string;
+        lat?: number;
+        lon?: number;
+        asn?: string;
+        cidr?: string;
+        rir?: string;
+        netName?: string;
+        source?: string;
+      }
+    >();
     if (Array.isArray(rawLogEvents)) {
       rawLogEvents.forEach((e: any) => {
         if (e.sourceIp && e.country) {
@@ -453,6 +427,14 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             flag: e.flag,
             asName: e.asName,
             city: e.city,
+            region: e.region,
+            lat: typeof e.lat === 'number' ? e.lat : undefined,
+            lon: typeof e.lon === 'number' ? e.lon : undefined,
+            asn: e.asn || e.asNum,
+            cidr: e.cidr,
+            rir: e.rir,
+            netName: e.netName,
+            source: e.source,
           });
         }
       });
@@ -482,16 +464,32 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
 
         const existing = ipMap.get(ip);
         if (existing) {
-          // Live Raw Logs is the 100% accurate source of truth for country, countryName, flag, reason, and ISP
+          const shouldOverwriteGeo =
+            ev.source === 'apnic_rdap_v2' ||
+            (Boolean(ev.country) && ev.country !== 'XX' && existing.source !== 'apnic_rdap_v2');
+
           ipMap.set(ip, {
             ...existing,
-            country: ev.country || existing.country,
-            countryName: ev.countryName || existing.countryName,
-            flag: ev.flag || existing.flag,
-            city: ev.city || existing.city,
+            ...(shouldOverwriteGeo
+              ? {
+                  country: ev.country || existing.country,
+                  countryName: ev.countryName || existing.countryName,
+                  flag: ev.flag || existing.flag,
+                  city: ev.city || existing.city,
+                  region: ev.region || existing.region,
+                  lat: typeof ev.lat === 'number' ? ev.lat : existing.lat,
+                  lon: typeof ev.lon === 'number' ? ev.lon : existing.lon,
+                  isp: ev.asName || existing.isp,
+                  asName: ev.asName || existing.asName,
+                  asn: ev.asn || ev.asNum || existing.asn,
+                  cidr: ev.cidr || existing.cidr,
+                  rir: ev.rir || existing.rir,
+                  netName: ev.netName || existing.netName,
+                  source: ev.source || existing.source,
+                }
+              : {}),
             reason: ev.scenario || existing.reason,
-            isp: ev.asName || existing.isp,
-            count: Math.max(existing.count || 1, (ev.eventsCount || 1)),
+            count: Math.max(existing.count || 1, ev.eventsCount || 1),
             creationTime: ev.fullDateTimeWIT || ev.timestamp || existing.creationTime,
           });
         } else {
@@ -499,9 +497,12 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
           ipMap.set(ip, {
             ip,
             country: ev.country || 'XX',
-            countryName: ev.countryName || 'Unknown',
+            countryName: ev.countryName || 'Resolving...',
             flag: ev.flag || '🌐',
             city: ev.city,
+            region: ev.region,
+            lat: typeof ev.lat === 'number' ? ev.lat : undefined,
+            lon: typeof ev.lon === 'number' ? ev.lon : undefined,
             reason: ev.scenario || 'crowdsecurity/http-probing',
             action: ev.decision === 'ban' ? 'drop' : 'alert',
             expiresIn: ev.banDuration || '4h 00m',
@@ -511,7 +512,13 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
             dynamic: true,
             flagText: 'D',
             count: ev.eventsCount || 1,
-            isp: ev.asName || 'Cloud / Hosting Network',
+            isp: ev.asName || 'Resolving...',
+            asName: ev.asName,
+            asn: ev.asn || ev.asNum,
+            cidr: ev.cidr,
+            rir: ev.rir,
+            netName: ev.netName,
+            source: ev.source,
           });
         }
       });
@@ -520,32 +527,98 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     return Array.from(ipMap.values());
   }, [blockedIps, rawLogEvents]);
 
+  const allThreatIpStrings = useMemo(
+    () => allThreatIps.map((x) => cleanIpAddress(x.ip)).filter(Boolean),
+    [allThreatIps]
+  );
+  const threatGeoVersion = useHydratedGeoIp(allThreatIpStrings);
+
+  useEffect(() => {
+    const seedFromItem = (item: any) => {
+      const ip = item?.sourceIp || item?.ip;
+      if (ip && item?.source === 'apnic_rdap_v2' && item?.country && item.country !== 'XX') {
+        seedHydratedIpGeo({
+          ip,
+          country: item.country,
+          countryName: item.countryName || item.country,
+          flag: item.flag || '🌐',
+          city: item.city || 'Unknown',
+          region: item.region || '',
+          lat: typeof item.lat === 'number' ? item.lat : 0,
+          lon: typeof item.lon === 'number' ? item.lon : 0,
+          isp: item.isp || item.asName || '',
+          asName: item.asName || item.isp || '',
+          asn: item.asn || item.asNum || '',
+          cidr: item.cidr || '',
+          rir: item.rir || '',
+          netName: item.netName || '',
+          source: 'apnic_rdap_v2',
+        });
+      }
+    };
+    if (Array.isArray(blockedIps)) blockedIps.forEach(seedFromItem);
+    if (Array.isArray(rawLogEvents)) rawLogEvents.forEach(seedFromItem);
+  }, [blockedIps, rawLogEvents]);
+
   // Helper to resolve canonical country & city coordinates for an IP item
-  // Ensures City, Country Code, Country Name, and Flag Emoji are 100% synchronized with Live Raw Logs
+  // Uses authoritative APNIC RDAP + GeoIP hydrated profile so all panels remain 100% consistent
   const resolveItemGeo = (item: BlockedIpItem) => {
     const liveMatch = liveRawIpMap.get(item.ip);
-    const geo = lookupIpLocation(item.ip);
+    const liveIsApnic = liveMatch?.source === 'apnic_rdap_v2';
+    const itemIsApnic = item.source === 'apnic_rdap_v2';
 
-    // 1. Strict Priority: Live Raw Logs (confirmed exact match with Live Raw Logs panel)
-    const rawCountry = liveMatch?.country || (item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country);
-    const rawCountryName = liveMatch?.countryName || (item.countryName && item.countryName !== 'RouterOS Address-List' ? item.countryName : geo.countryName);
-    const rawFlag = liveMatch?.flag || item.flag || geo.flag;
-    const cityHint = liveMatch?.city || item.city || geo.city;
+    const preferredHint = liveIsApnic
+      ? { ...item, ...liveMatch, isp: item.isp || liveMatch?.asName }
+      : itemIsApnic
+      ? { ...liveMatch, ...item }
+      : {
+          ...item,
+          ...liveMatch,
+          country:
+            item.country && item.country !== 'GLOBAL' && item.country !== 'XX'
+              ? item.country
+              : liveMatch?.country,
+          countryName:
+            item.countryName && item.countryName !== 'RouterOS Address-List'
+              ? item.countryName
+              : liveMatch?.countryName,
+          flag: liveMatch?.flag || item.flag,
+          city: item.city || liveMatch?.city,
+          region: item.region || liveMatch?.region,
+          lat:
+            typeof item.lat === 'number' && (item.lat !== 0 || item.lon !== 0)
+              ? item.lat
+              : liveMatch?.lat,
+          lon:
+            typeof item.lon === 'number' && (item.lat !== 0 || item.lon !== 0)
+              ? item.lon
+              : liveMatch?.lon,
+          isp: item.isp || liveMatch?.asName,
+          asName: item.asName || liveMatch?.asName,
+          asn: item.asn || liveMatch?.asn,
+          cidr: item.cidr || liveMatch?.cidr,
+          rir: item.rir || liveMatch?.rir,
+          netName: item.netName || liveMatch?.netName,
+          source: liveMatch?.source || item.source,
+        };
 
-    // Resolve canonical ISO country info first (ensures 'TW', 'Taiwan', '🇹🇼' without ambiguity)
-    const canonical = getCanonicalCountryInfo(rawCountry, rawFlag, rawCountryName);
-
-    // Resolve coordinates and city strictly adhering to canonical countryCode
-    const resolved = resolveCityCoordinates(cityHint, canonical.code, item.ip);
+    const u = resolveUnifiedIpGeo(item.ip, preferredHint);
 
     return {
-      countryCode: canonical.code,
-      countryName: canonical.name,
-      flag: canonical.flag,
-      cityName: resolved.city,
-      lat: resolved.lat,
-      lon: resolved.lon,
-      isp: liveMatch?.asName || item.isp || geo.isp || 'Cloud / Hosting Network',
+      countryCode: u.country,
+      countryName: u.countryName,
+      flag: u.flag,
+      cityName: u.city,
+      region: u.region,
+      lat: u.lat,
+      lon: u.lon,
+      isp: u.isp || u.asName || 'Resolving...',
+      asName: u.asName,
+      asn: u.asn,
+      cidr: u.cidr,
+      rir: u.rir,
+      netName: u.netName,
+      source: u.source,
     };
   };
 
@@ -574,9 +647,24 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
         const countryCodeMatch = (g.countryCode || '').toLowerCase().includes(q);
         const cityMatch = (g.cityName || '').toLowerCase().includes(q);
         const ispMatch = (g.isp || item.isp || '').toLowerCase().includes(q);
+        const asNameMatch = (g.asName || '').toLowerCase().includes(q);
+        const asnMatch = (g.asn || '').toLowerCase().includes(q);
+        const cidrMatch = (g.cidr || '').toLowerCase().includes(q);
+        const rirMatch = (g.rir || '').toLowerCase().includes(q);
         const originMatch = (item.origin || '').toLowerCase().includes(q);
 
-        const matchesQuery = ipMatch || reasonMatch || countryNameMatch || countryCodeMatch || cityMatch || ispMatch || originMatch;
+        const matchesQuery =
+          ipMatch ||
+          reasonMatch ||
+          countryNameMatch ||
+          countryCodeMatch ||
+          cityMatch ||
+          ispMatch ||
+          asNameMatch ||
+          asnMatch ||
+          cidrMatch ||
+          rirMatch ||
+          originMatch;
         if (!matchesQuery) return false;
         return true;
       }
@@ -597,7 +685,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
 
       return true;
     });
-  }, [allThreatIps, timeFilter, threatTypeFilter, searchQuery, liveRawIpMap]);
+  }, [allThreatIps, timeFilter, threatTypeFilter, searchQuery, liveRawIpMap, threatGeoVersion]);
 
   // High-Precision City Aggregates
   const cityThreatAggregates = useMemo(() => {
@@ -615,6 +703,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       ips: BlockedIpItem[];
       trajectory: [number, number][];
       isp?: string;
+      asn?: string;
+      cidr?: string;
+      rir?: string;
     }>();
 
     filteredIps.forEach((item) => {
@@ -637,6 +728,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
           ips: [],
           trajectory: traj,
           isp: g.isp,
+          asn: g.asn,
+          cidr: g.cidr,
+          rir: g.rir,
         });
       }
 
@@ -650,7 +744,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalAttacks - a.totalAttacks);
-  }, [filteredIps, liveRawIpMap]);
+  }, [filteredIps, liveRawIpMap, threatGeoVersion]);
 
   // Aggregate attacks by Country with Exact Coordinates
   const countryThreatAggregates = useMemo(() => {
@@ -676,10 +770,12 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       const flag = g.flag;
 
       const coords = COUNTRY_COORDINATES[code] || {
-        lat: 20 + ((code.charCodeAt(0) * 3) % 40) - 20,
-        lon: ((code.charCodeAt(0) * 11) % 360) - 180,
+        lat: 0,
+        lon: 0,
+        capital: 'Unknown',
         name,
-        continent: 'Global'
+        continent: 'Global',
+        flag,
       };
 
       if (!map.has(code)) {
@@ -710,9 +806,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
     });
 
     return Array.from(map.values()).sort((a, b) => b.totalAttacks - a.totalAttacks);
-  }, [filteredIps, liveRawIpMap]);
+  }, [filteredIps, liveRawIpMap, threatGeoVersion]);
 
-  // Active threat nodes for the map (either city-level or country-level)
+  // Active threat nodes for leaderboards / summaries (either city-level or country-level)
   const activeThreatNodes = useMemo(() => {
     if (viewGranularity === 'city') {
       return cityThreatAggregates.map((c) => ({
@@ -731,6 +827,9 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
         ips: c.ips,
         trajectory: c.trajectory,
         isp: c.isp,
+        asn: c.asn,
+        cidr: c.cidr,
+        rir: c.rir,
         isCity: true,
       }));
     }
@@ -750,9 +849,19 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
       ips: c.ips,
       trajectory: c.trajectory,
       isp: undefined,
+      asn: undefined,
+      cidr: undefined,
+      rir: undefined,
       isCity: false,
     }));
   }, [viewGranularity, cityThreatAggregates, countryThreatAggregates]);
+
+  // Exclude invalid / unresolved / zero-coord entries (e.g. Manual Test Entry 1.0.2.4.5) from map pins & beams
+  const mapThreatNodes = useMemo(() => {
+    return activeThreatNodes.filter(
+      (n) => n.countryCode !== 'XX' && n.countryCode !== 'GLOBAL' && (n.lat !== 0 || n.lon !== 0)
+    );
+  }, [activeThreatNodes]);
 
   // Overall summary metrics
   const totalAttacksToday = useMemo(() => {
@@ -1133,7 +1242,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
               <div className="flex items-center gap-1.5 text-slate-400 font-mono">
                 <span className="w-2.5 h-2.5 rounded-full bg-rose-500"></span>
                 <span>
-                  Asal Serangan ({viewGranularity === 'city' ? `${uniqueCitiesCount} Kota` : `${uniqueCountriesCount} Negara`})
+                  Asal Serangan ({mapThreatNodes.length} {viewGranularity === 'city' ? 'Kota' : 'Negara'})
                 </span>
               </div>
               <div className="flex items-center gap-1.5 text-slate-400 font-mono">
@@ -1170,7 +1279,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
               )}
 
               {/* Threat Trajectory Arcs (From City or Country to Merauke) */}
-              {activeThreatNodes.map((node) => {
+              {mapThreatNodes.map((node) => {
                 const isSelected = selectedNodeKey === node.key;
                 return (
                   <Polyline
@@ -1188,7 +1297,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
 
               {/* Animated Glowing Attack Missile Balls / Energy Beams traveling along trajectories */}
               <AnimatedAttackMissiles
-                countries={activeThreatNodes.map((node) => ({
+                countries={mapThreatNodes.map((node) => ({
                   code: node.code,
                   trajectory: node.trajectory,
                   totalAttacks: node.totalAttacks,
@@ -1217,7 +1326,7 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
               </Marker>
 
               {/* Origin Threat Markers (City or Country granularity) */}
-              {activeThreatNodes.map((node) => {
+              {mapThreatNodes.map((node) => {
                 const isSelected = selectedNodeKey === node.key;
                 return (
                   <Marker
@@ -1264,6 +1373,14 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                               <span className="text-slate-500">🏢 Provider / Cloud:</span>
                               <span className="font-bold text-slate-800 text-right truncate max-w-[130px]" title={node.isp}>
                                 {node.isp}
+                              </span>
+                            </div>
+                          )}
+                          {(node.asn || node.cidr || node.rir) && (
+                            <div className="flex justify-between">
+                              <span className="text-slate-500">🌐 Registry / ASN:</span>
+                              <span className="font-bold text-blue-700 text-right truncate max-w-[140px]" title={`${node.rir || ''} ${node.asn || ''} ${node.cidr || ''}`}>
+                                {[node.rir, node.asn, node.cidr].filter(Boolean).join(' • ')}
                               </span>
                             </div>
                           )}
@@ -1419,7 +1536,11 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                           {node.isCity ? `${node.cityName}, ${node.countryCode}` : node.countryName}
                         </span>
                         <span className="text-[10px] text-slate-400 font-mono">
-                          {node.isCity ? `${node.lat.toFixed(2)}, ${node.lon.toFixed(2)}` : node.countryCode}
+                          {node.isCity
+                            ? (node.lat === 0 && node.lon === 0) || node.countryCode === 'XX'
+                              ? 'N/A (Manual)'
+                              : `${node.lat.toFixed(2)}, ${node.lon.toFixed(2)}`
+                            : node.countryCode}
                         </span>
                       </div>
                     </div>
@@ -1529,12 +1650,23 @@ export const GeoIpThreatMap: React.FC<GeoIpThreatMapProps> = ({
                             <span className="text-[10px] text-slate-400 truncate max-w-[170px] block" title={g.isp}>
                               {g.isp}
                             </span>
+                            {(g.asn || g.rir || g.cidr) && (
+                              <span className="text-[9px] text-slate-500 truncate max-w-[170px] block">
+                                {[g.rir, g.asn, g.cidr].filter(Boolean).join(' • ')}
+                              </span>
+                            )}
                           </div>
                         </td>
 
                         <td className="py-2.5 px-3 font-mono text-[11px] text-slate-300 whitespace-nowrap">
-                          <span className="text-cyan-400 font-bold">{g.lat.toFixed(4)}</span>,{' '}
-                          <span className="text-cyan-400 font-bold">{g.lon.toFixed(4)}</span>
+                          {(g.lat === 0 && g.lon === 0) || g.source === 'invalid_ip' ? (
+                            <span className="text-slate-500">N/A (Manual)</span>
+                          ) : (
+                            <>
+                              <span className="text-cyan-400 font-bold">{g.lat.toFixed(4)}</span>,{' '}
+                              <span className="text-cyan-400 font-bold">{g.lon.toFixed(4)}</span>
+                            </>
+                          )}
                         </td>
 
                         <td className="py-2.5 px-3">

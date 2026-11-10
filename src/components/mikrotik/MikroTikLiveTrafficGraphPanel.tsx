@@ -43,9 +43,9 @@ import {
 export interface InterfaceItem {
   name: string;
   label?: string;
-  group?: 'wan' | 'lan' | 'gedung' | 'wireless' | 'sfp' | string;
+  group?: 'wan' | 'lan' | 'gedung' | 'wireless' | 'sfp';
   type: string;
-  status: 'Up' | 'Down' | string;
+  status: 'Up' | 'Down';
   speed: string;
   speed_num?: number;
   rx: string;
@@ -56,7 +56,6 @@ export interface InterfaceItem {
   rxBytesRaw?: number;
   txBytesRaw?: number;
   totalVolume?: string;
-  [key: string]: any;
 }
 
 interface TrafficDataPoint {
@@ -929,12 +928,12 @@ curl -k -u "mon-user:YourPassword123" \\
                       boxShadow: '0 10px 25px -5px rgba(0, 0, 0, 0.5)',
                     }}
                     labelStyle={{ color: '#94a3b8', marginBottom: '4px' }}
-                    formatter={(value: any, name: any) => {
+                    formatter={(value: any, name: string) => {
                       const num = typeof value === 'number' ? value : parseFloat(value);
                       const formatted = formatRate(num);
                       if (name === 'rxMbps') return [formatted, 'RX Ingress (Download)'];
                       if (name === 'txMbps') return [formatted, 'TX Egress (Upload)'];
-                      return [formatted, String(name ?? '')];
+                      return [formatted, name];
                     }}
                   />
 

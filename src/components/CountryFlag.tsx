@@ -36,6 +36,7 @@ export const ISO_TO_CANONICAL_COUNTRY: Record<string, { name: string; flag: stri
   PH: { name: 'Philippines', flag: '🇵🇭' },
   TW: { name: 'Taiwan', flag: '🇹🇼' },
   HK: { name: 'Hong Kong', flag: '🇭🇰' },
+  MO: { name: 'Macau', flag: '🇲🇴' },
   BE: { name: 'Belgium', flag: '🇧🇪' },
   CH: { name: 'Switzerland', flag: '🇨🇭' },
   AT: { name: 'Austria', flag: '🇦🇹' },
@@ -57,15 +58,57 @@ export const ISO_TO_CANONICAL_COUNTRY: Record<string, { name: string; flag: stri
   AR: { name: 'Argentina', flag: '🇦🇷' },
   CO: { name: 'Colombia', flag: '🇨🇴' },
   CL: { name: 'Chile', flag: '🇨🇱' },
+  PE: { name: 'Peru', flag: '🇵🇪' },
+  EC: { name: 'Ecuador', flag: '🇪🇨' },
+  UY: { name: 'Uruguay', flag: '🇺🇾' },
+  GT: { name: 'Guatemala', flag: '🇬🇹' },
+  PA: { name: 'Panama', flag: '🇵🇦' },
+  CR: { name: 'Costa Rica', flag: '🇨🇷' },
   EG: { name: 'Egypt', flag: '🇪🇬' },
   NG: { name: 'Nigeria', flag: '🇳🇬' },
   KE: { name: 'Kenya', flag: '🇰🇪' },
+  MA: { name: 'Morocco', flag: '🇲🇦' },
+  DZ: { name: 'Algeria', flag: '🇩🇿' },
+  TN: { name: 'Tunisia', flag: '🇹🇳' },
   SA: { name: 'Saudi Arabia', flag: '🇸🇦' },
   AE: { name: 'United Arab Emirates', flag: '🇦🇪' },
+  QA: { name: 'Qatar', flag: '🇶🇦' },
+  KW: { name: 'Kuwait', flag: '🇰🇼' },
+  OM: { name: 'Oman', flag: '🇴🇲' },
+  IL: { name: 'Israel', flag: '🇮🇱' },
+  JO: { name: 'Jordan', flag: '🇯🇴' },
   IR: { name: 'Iran', flag: '🇮🇷' },
   PK: { name: 'Pakistan', flag: '🇵🇰' },
   BD: { name: 'Bangladesh', flag: '🇧🇩' },
+  NP: { name: 'Nepal', flag: '🇳🇵' },
+  LK: { name: 'Sri Lanka', flag: '🇱🇰' },
+  MM: { name: 'Myanmar', flag: '🇲🇲' },
+  KH: { name: 'Cambodia', flag: '🇰🇭' },
+  LA: { name: 'Laos', flag: '🇱🇦' },
+  BN: { name: 'Brunei', flag: '🇧🇳' },
   NZ: { name: 'New Zealand', flag: '🇳🇿' },
+  LU: { name: 'Luxembourg', flag: '🇱🇺' },
+  KZ: { name: 'Kazakhstan', flag: '🇰🇿' },
+  UZ: { name: 'Uzbekistan', flag: '🇺🇿' },
+  CY: { name: 'Cyprus', flag: '🇨🇾' },
+  AD: { name: 'Andorra', flag: '🇦🇩' },
+  LV: { name: 'Latvia', flag: '🇱🇻' },
+  EE: { name: 'Estonia', flag: '🇪🇪' },
+  BY: { name: 'Belarus', flag: '🇧🇾' },
+  MD: { name: 'Moldova', flag: '🇲🇩' },
+  GE: { name: 'Georgia', flag: '🇬🇪' },
+  AM: { name: 'Armenia', flag: '🇦🇲' },
+  AZ: { name: 'Azerbaijan', flag: '🇦🇿' },
+  RS: { name: 'Serbia', flag: '🇷🇸' },
+  SK: { name: 'Slovakia', flag: '🇸🇰' },
+  HR: { name: 'Croatia', flag: '🇭🇷' },
+  SI: { name: 'Slovenia', flag: '🇸🇮' },
+  IS: { name: 'Iceland', flag: '🇮🇸' },
+  AL: { name: 'Albania', flag: '🇦🇱' },
+  MK: { name: 'North Macedonia', flag: '🇲🇰' },
+  BA: { name: 'Bosnia and Herzegovina', flag: '🇧🇦' },
+  MT: { name: 'Malta', flag: '🇲🇹' },
+  EU: { name: 'European Union', flag: '🇪🇺' },
   LAN: { name: 'Local Network (LAN)', flag: '🏠' },
   XX: { name: 'Global / Unknown', flag: '🌐' }
 };
@@ -74,24 +117,31 @@ export const ISO_TO_CANONICAL_COUNTRY: Record<string, { name: string; flag: stri
 const COUNTRY_NAME_TO_ISO: Record<string, string> = {
   indonesia: 'id',
   netherlands: 'nl',
+  'the netherlands': 'nl',
   holland: 'nl',
   'united states': 'us',
+  'united states of america': 'us',
   usa: 'us',
   germany: 'de',
   deutschland: 'de',
   france: 'fr',
   russia: 'ru',
   'russian federation': 'ru',
+  'people\'s republic of china': 'cn',
   china: 'cn',
   singapore: 'sg',
   japan: 'jp',
   'south korea': 'kr',
+  'republic of korea': 'kr',
+  'korea, republic of': 'kr',
   korea: 'kr',
   india: 'in',
   vietnam: 'vn',
+  'viet nam': 'vn',
   'united kingdom': 'gb',
   uk: 'gb',
   'great britain': 'gb',
+  england: 'gb',
   australia: 'au',
   brazil: 'br',
   canada: 'ca',
@@ -107,10 +157,14 @@ const COUNTRY_NAME_TO_ISO: Record<string, string> = {
   'republic of china': 'tw',
   'chinese taipei': 'tw',
   'taiwan, province of china': 'tw',
-  'roc': 'tw',
+  roc: 'tw',
   hongkong: 'hk',
   'hong kong': 'hk',
+  macau: 'mo',
+  macao: 'mo',
   belgium: 'be',
+  belgie: 'be',
+  belgique: 'be',
   switzerland: 'ch',
   austria: 'at',
   sweden: 'se',
@@ -122,6 +176,7 @@ const COUNTRY_NAME_TO_ISO: Record<string, string> = {
   portugal: 'pt',
   ukraine: 'ua',
   turkey: 'tr',
+  turkiye: 'tr',
   romania: 'ro',
   czechia: 'cz',
   'czech republic': 'cz',
@@ -132,19 +187,65 @@ const COUNTRY_NAME_TO_ISO: Record<string, string> = {
   argentina: 'ar',
   colombia: 'co',
   chile: 'cl',
+  peru: 'pe',
+  ecuador: 'ec',
+  uruguay: 'uy',
+  guatemala: 'gt',
+  panama: 'pa',
+  'costa rica': 'cr',
   egypt: 'eg',
   nigeria: 'ng',
   kenya: 'ke',
+  morocco: 'ma',
+  algeria: 'dz',
+  tunisia: 'tn',
   saudi: 'sa',
   'saudi arabia': 'sa',
   uae: 'ae',
   'united arab emirates': 'ae',
+  qatar: 'qa',
+  kuwait: 'kw',
+  oman: 'om',
+  israel: 'il',
+  jordan: 'jo',
   iran: 'ir',
   pakistan: 'pk',
   bangladesh: 'bd',
+  nepal: 'np',
+  'sri lanka': 'lk',
+  myanmar: 'mm',
+  cambodia: 'kh',
+  laos: 'la',
+  brunei: 'bn',
   newzealand: 'nz',
   'new zealand': 'nz',
+  luxembourg: 'lu',
+  kazakhstan: 'kz',
+  uzbekistan: 'uz',
+  cyprus: 'cy',
+  andorra: 'ad',
+  latvia: 'lv',
+  estonia: 'ee',
+  belarus: 'by',
+  moldova: 'md',
+  georgia: 'ge',
+  armenia: 'am',
+  azerbaijan: 'az',
+  serbia: 'rs',
+  slovakia: 'sk',
+  croatia: 'hr',
+  slovenia: 'si',
+  iceland: 'is',
+  albania: 'al',
+  'north macedonia': 'mk',
+  'bosnia and herzegovina': 'ba',
+  malta: 'mt',
+  'european union': 'eu',
 };
+
+const SORTED_COUNTRY_NAME_ENTRIES = Object.entries(COUNTRY_NAME_TO_ISO).sort(
+  (a, b) => b[0].length - a[0].length
+);
 
 /**
  * Deterministically decode Unicode Flag Emoji to ISO 2-letter country code
@@ -177,8 +278,15 @@ export function resolveCountryIsoCode(countryInput?: string, flagEmoji?: string)
     if (raw === 'lan' || raw === 'local' || raw === 'localhost' || raw === 'loopback') {
       return 'lan';
     }
-    if (raw === 'xx' || raw === 'global' || raw === 'unknown') {
-      // Continue to emoji or other checks
+    if (
+      raw === 'xx' ||
+      raw === 'global' ||
+      raw === 'unknown' ||
+      raw === 'global / unknown' ||
+      raw === 'manual / test entry' ||
+      raw === 'resolving...'
+    ) {
+      // Fall through to emoji check, do not match substring
     } else if (raw.length === 2 && /^[a-z]{2}$/.test(raw)) {
       return raw;
     }
@@ -190,10 +298,27 @@ export function resolveCountryIsoCode(countryInput?: string, flagEmoji?: string)
 
   if (!countryInput) return null;
   const raw = countryInput.trim().toLowerCase();
+  if (
+    raw === 'xx' ||
+    raw === 'global' ||
+    raw === 'unknown' ||
+    raw === 'global / unknown' ||
+    raw === 'manual / test entry' ||
+    raw === 'resolving...'
+  ) {
+    return null;
+  }
 
-  // 3. Try finding matches in known country names (handles "Indonesia (Jakarta)", "Germany (Frankfurt)")
-  for (const [key, code] of Object.entries(COUNTRY_NAME_TO_ISO)) {
-    if (raw === key || raw.startsWith(key) || raw.includes(key)) {
+  // 3. Pass 1: exact match
+  if (COUNTRY_NAME_TO_ISO[raw]) {
+    return COUNTRY_NAME_TO_ISO[raw];
+  }
+
+  // 4. Pass 2: Longest-first word-boundary match (e.g., "Republic of China" before "China")
+  for (const [key, code] of SORTED_COUNTRY_NAME_ENTRIES) {
+    const escaped = key.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const boundaryRe = new RegExp(`(?:^|[^a-z])${escaped}(?:$|[^a-z])`, 'i');
+    if (boundaryRe.test(raw)) {
       return code;
     }
   }
@@ -211,7 +336,7 @@ export function getCanonicalCountryInfo(
   rawCountryName?: string
 ): { code: string; name: string; flag: string } {
   const iso = resolveCountryIsoCode(countryInput, flagEmoji) || resolveCountryIsoCode(rawCountryName);
-  
+
   if (!iso) {
     return {
       code: 'XX',

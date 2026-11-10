@@ -6,6 +6,25 @@ import { SqliteDataSource, DashboardSourceMapping, EnvironmentPreset, Prometheus
 const DB_DIR = path.join(process.cwd(), 'data');
 const DB_FILE = path.join(DB_DIR, 'netwatch.db');
 
+export interface IpGeoCacheRecord {
+  ip: string;
+  country: string;
+  countryName: string;
+  flag: string;
+  city: string;
+  region: string;
+  lat: number;
+  lon: number;
+  isp: string;
+  asName: string;
+  asn: string;
+  cidr: string;
+  rir: string;
+  netName: string;
+  source: string;
+  updatedAt: string;
+}
+
 // Authentic default 12 Prometheus Jobs from University Infrastructure (Prometheus 192.168.77.30:9090)
 export const DEFAULT_PROMETHEUS_CAMPUS_TARGETS: PrometheusTarget[] = [
   {
@@ -546,6 +565,28 @@ class SqliteDatabaseManager {
         labels TEXT,
         selected_metrics TEXT,
         created_at TEXT NOT NULL,
+        updated_at TEXT NOT NULL
+      );
+    `);
+
+    // 7. Authoritative APNIC RDAP + Verified GeoIP Persistent Cache Table
+    this.db.exec(`
+      CREATE TABLE IF NOT EXISTS ip_geo_cache (
+        ip TEXT PRIMARY KEY,
+        country TEXT NOT NULL,
+        country_name TEXT NOT NULL,
+        flag TEXT NOT NULL,
+        city TEXT DEFAULT '',
+        region TEXT DEFAULT '',
+        lat REAL DEFAULT 0,
+        lon REAL DEFAULT 0,
+        isp TEXT DEFAULT '',
+        as_name TEXT DEFAULT '',
+        asn TEXT DEFAULT '',
+        cidr TEXT DEFAULT '',
+        rir TEXT DEFAULT '',
+        net_name TEXT DEFAULT '',
+        source TEXT DEFAULT 'apnic_rdap_v2',
         updated_at TEXT NOT NULL
       );
     `);
@@ -1799,6 +1840,88 @@ class SqliteDatabaseManager {
 
     this.addAuditLog('CONFIG_IMPORTED', 'Operator', 'Konfigurasi jaringan berhasil diimpor dari file cadangan.');
     return true;
+  }
+
+  // --- AUTHORITATIVE IP GEO CACHE (APNIC RDAP + VERIFIED GEO) ---
+  public getCachedIpGeo(ip: string): IpGeoCacheRecord | null {
+    const row = this.db.prepare('SELECT * FROM ip_geo_cache WHERE ip = ?').get(ip) as any;
+    if (!row) return null;
+    return this.mapRowToIpGeo(row);
+  }
+
+  public getCachedIpGeoBatch(ips: string[]): Record<string, IpGeoCacheRecord> {
+    const clean = Array.from(new Set(ips.map((i) => String(i || '').trim()).filter(Boolean)));
+    const result: Record<string, IpGeoCacheRecord> = {};
+    if (clean.length === 0) return result;
+    const chunkSize = 200;
+    for (let i = 0; i < clean.length; i += chunkSize) {
+      const chunk = clean.slice(i, i + chunkSize);
+      const placeholders = chunk.map(() => '?').join(',');
+      const rows = this.db.prepare(`SELECT * FROM ip_geo_cache WHERE ip IN (${placeholders})`).all(...chunk) as any[];
+      for (const row of rows) {
+        const mapped = this.mapRowToIpGeo(row);
+        result[mapped.ip] = mapped;
+      }
+    }
+    return result;
+  }
+
+  public upsertIpGeoBatch(records: IpGeoCacheRecord[]): void {
+    if (!Array.isArray(records) || records.length === 0) return;
+    const stmt = this.db.prepare(`
+      INSERT OR REPLACE INTO ip_geo_cache (
+        ip, country, country_name, flag, city, region, lat, lon,
+        isp, as_name, asn, cidr, rir, net_name, source, updated_at
+      ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+    `);
+    this.db.exec('BEGIN');
+    try {
+      for (const r of records) {
+        stmt.run(
+          r.ip,
+          r.country,
+          r.countryName,
+          r.flag,
+          r.city || '',
+          r.region || '',
+          Number.isFinite(r.lat) ? r.lat : 0,
+          Number.isFinite(r.lon) ? r.lon : 0,
+          r.isp || '',
+          r.asName || '',
+          r.asn || '',
+          r.cidr || '',
+          r.rir || '',
+          r.netName || '',
+          r.source || 'apnic_rdap_v2',
+          r.updatedAt || new Date().toISOString()
+        );
+      }
+      this.db.exec('COMMIT');
+    } catch (e) {
+      this.db.exec('ROLLBACK');
+      throw e;
+    }
+  }
+
+  private mapRowToIpGeo(r: any): IpGeoCacheRecord {
+    return {
+      ip: r.ip,
+      country: r.country,
+      countryName: r.country_name,
+      flag: r.flag,
+      city: r.city || '',
+      region: r.region || '',
+      lat: typeof r.lat === 'number' ? r.lat : Number(r.lat) || 0,
+      lon: typeof r.lon === 'number' ? r.lon : Number(r.lon) || 0,
+      isp: r.isp || '',
+      asName: r.as_name || '',
+      asn: r.asn || '',
+      cidr: r.cidr || '',
+      rir: r.rir || '',
+      netName: r.net_name || '',
+      source: r.source || 'apnic_rdap_v2',
+      updatedAt: r.updated_at,
+    };
   }
 }
 

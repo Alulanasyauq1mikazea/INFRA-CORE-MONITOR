@@ -192,7 +192,7 @@ export const initialNodes: NodeMetric[] = [
     topBlockedIps: [
       { ip: '185.220.101.5', country: 'RU', reason: 'SQL Injection Attack Pattern', count: 1420 },
       { ip: '45.154.255.88', country: 'NL', reason: 'Brute Force Rate Limit Exceeded', count: 980 },
-      { ip: '194.26.29.112', country: 'CN', reason: 'Cross-Site Scripting (XSS) Vector', count: 760 },
+      { ip: '194.26.29.112', country: 'NL', reason: 'Cross-Site Scripting (XSS) Vector', count: 760 },
       { ip: '103.152.220.14', country: 'ID', reason: 'Known Botnet Probe / Scanner', count: 420 },
     ],
   },

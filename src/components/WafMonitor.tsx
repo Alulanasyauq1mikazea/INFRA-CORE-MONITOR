@@ -2019,11 +2019,14 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
         const enrichedItems = data.items.map((entry: any) => {
           const rawMatch = rawLogEvents.find((e: any) => e.sourceIp === entry.ip);
           const geo = lookupIpLocation(entry.ip);
+          const hasPreciseGeo = geo && geo.country && geo.country !== 'XX' && geo.country !== 'GLOBAL';
           return {
             ...entry,
-            flag: rawMatch?.flag || (entry.flag && entry.flag !== '🌐' ? entry.flag : geo.flag),
-            country: rawMatch?.country || (entry.country && entry.country !== 'GLOBAL' && entry.country !== 'XX' ? entry.country : geo.country),
-            countryName: rawMatch?.countryName || (entry.countryName && entry.countryName !== 'RouterOS Address-List' && entry.countryName !== 'Global Community Blocklist' ? entry.countryName : geo.countryName),
+            flag: hasPreciseGeo ? geo.flag : (rawMatch?.flag || (entry.flag && entry.flag !== '🌐' ? entry.flag : geo.flag)),
+            country: hasPreciseGeo ? geo.country : (rawMatch?.country || (entry.country && entry.country !== 'GLOBAL' && entry.country !== 'XX' ? entry.country : geo.country)),
+            countryName: hasPreciseGeo ? geo.countryName : (rawMatch?.countryName || (entry.countryName && entry.countryName !== 'RouterOS Address-List' && entry.countryName !== 'Global Community Blocklist' ? entry.countryName : geo.countryName)),
+            city: hasPreciseGeo ? geo.city : (entry.city || geo.city),
+            isp: geo.isp || entry.isp || rawMatch?.asName,
           };
         });
 
@@ -2922,9 +2925,10 @@ export const WafMonitor: React.FC<WafMonitorProps> = ({ wafNode, onRefresh }) =>
                               <td className="py-2.5 px-3 text-slate-300">
                                 {(() => {
                                   const geo = lookupIpLocation(item.ip);
-                                  const flag = item.flag && item.flag !== '🌐' ? item.flag : geo.flag;
-                                  const name = item.countryName && item.countryName !== 'RouterOS Address-List' && item.countryName !== 'Global Community Blocklist' ? item.countryName : geo.countryName;
-                                  const countryCode = item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country;
+                                  const hasPreciseGeo = geo && geo.country && geo.country !== 'XX' && geo.country !== 'GLOBAL';
+                                  const flag = hasPreciseGeo ? geo.flag : (item.flag && item.flag !== '🌐' ? item.flag : geo.flag);
+                                  const name = hasPreciseGeo ? geo.countryName : (item.countryName && item.countryName !== 'RouterOS Address-List' && item.countryName !== 'Global Community Blocklist' ? item.countryName : geo.countryName);
+                                  const countryCode = hasPreciseGeo ? geo.country : (item.country && item.country !== 'GLOBAL' && item.country !== 'XX' ? item.country : geo.country);
 
                                   return (
                                     <div className="flex items-center gap-2 whitespace-nowrap">
