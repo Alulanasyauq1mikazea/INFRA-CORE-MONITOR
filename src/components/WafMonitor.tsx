@@ -81,6 +81,11 @@ import { NodeMetric } from '../types';
 import { lookupIpLocation } from '../utils/geoip';
 import { CountryFlag, getCanonicalCountryInfo } from './CountryFlag';
 import { GeoIpThreatMap } from './GeoIpThreatMap';
+import {
+  REAL_GROUND_TRUTH_STATS,
+  ALL_REAL_LOCAL_DECISIONS,
+  REAL_LOCAL_ATTACKS_TODAY
+} from '../data/realCrowdsecDecisions';
 
 interface WafMonitorProps {
   wafNode?: NodeMetric;
